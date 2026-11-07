@@ -1,6 +1,22 @@
 import { util,  Rect, iMatrix, Point, Canvas, ActiveSelection, Group, Path, Line, loadSVGFromString } from "fabric";
 import throttle from "lodash.throttle";
-import FontFaceObserver from "fontfaceobserver";
+import { SingleLineText } from "../../../text/SingleLineText";
+import { DEFAULT_FONT_ID, hasSingleLineFont } from "../../../text/fonts";
+
+const LEGACY_TEXT_TYPES = ['IText', 'i-text', 'Text', 'text', 'Textbox', 'textbox'];
+
+/** Saved canvases from before single-line fonts stored outline text; redraw it as single-line text. */
+function toSingleLineTextJSON(obj) {
+    if (!LEGACY_TEXT_TYPES.includes(obj.type)) return obj;
+
+    return {
+        ...obj,
+        type: SingleLineText.type,
+        fontFamily: hasSingleLineFont(obj.fontFamily) ? obj.fontFamily : DEFAULT_FONT_ID,
+        fill: '',
+        styles: [],
+    };
+}
 
 export class Workspace {
     constructor(canvasRef, canvasConfig, setCanvasConfig, containerRef, toolRef) {
@@ -235,33 +251,11 @@ export class Workspace {
         const savedCanvas = localStorage.getItem('polyPlotCanvas');
         if (!savedCanvas) return;
 
-        const fontPromises = [];
-        const fontSet = new Set();
-        const parsedCanvas = JSON.parse(savedCanvas);
-        const objects = parsedCanvas.objects;
-
-        objects.forEach(obj => {
-            if (obj.type === 'IText' && obj.fontFamily && !fontSet.has(obj.fontFamily)) {
-                fontSet.add(obj.fontFamily);
-                const font = new FontFaceObserver(obj.fontFamily);
-                fontPromises.push(font.load(null, 15000));
-            }
-        });
-
         try {
-            await Promise.all(fontPromises);
+            const parsedCanvas = JSON.parse(savedCanvas);
+            parsedCanvas.objects = parsedCanvas.objects.map(toSingleLineTextJSON);
 
-            const refinedObjects = parsedCanvas.objects.map(obj => {
-                if (obj.type === 'IText') {
-                    obj.cursorColor = 'black';
-                    if (!obj.fontFamily || obj.fontFamily === 'undefined') { obj.fontFamily = 'Arial' }
-                }
-                return obj
-            });
-
-            parsedCanvas.objects = refinedObjects;
-
-            this.canvas.loadFromJSON(parsedCanvas).then(() => {
+            await this.canvas.loadFromJSON(parsedCanvas).then(() => {
                 this.canvas.getObjects().forEach((obj) => {
                     if (obj.name === 'workspace') {
                         this.workspace = obj;

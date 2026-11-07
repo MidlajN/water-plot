@@ -3,7 +3,6 @@
 
 import {
   createContext,
-  MutableRefObject,
   useContext,
   useEffect,
   useRef,
@@ -54,9 +53,6 @@ interface CanvasContextValue {
 
     plotCanvasState: unknown;
     setPlotCanvasState: Dispatch<SetStateAction<unknown>>;
-
-    fonts: Record<string, string>;
-    setFonts: Dispatch<SetStateAction<Record<string, string>>>;
 }
 
 const CanvasContext = createContext<CanvasContextValue | null>(null);
@@ -97,14 +93,6 @@ export function CanvasProvider({
 
     const initialConfigRef = useRef(canvasConfig);
 
-    const [fonts, setFonts] = useState<Record<string, string>>({
-        Arial: "https://fonts.cdnfonts.com/s/29105/ARIAL.woff",
-        Georgia: "https://fonts.cdnfonts.com/s/19225/Georgia-PersonalUse.woff",
-        Verdana: "https://fonts.cdnfonts.com/s/26084/VERDANAI.woff",
-        SpaceMono: "https://fonts.cdnfonts.com/s/15317/SpaceMono-Regular.woff",
-        BobaMilky: "https://fonts.cdnfonts.com/s/97532/BobaMilky-RpRev.woff",
-        OpenSans: "/assets/open.ttf",
-    });
 
     useEffect(() => {
         if (!canvasRef.current || !containerRef.current) return;
@@ -217,9 +205,6 @@ export function CanvasProvider({
 
         plotCanvasState,
         setPlotCanvasState,
-
-        fonts,
-        setFonts,
     };
 
     return (
