@@ -1,6 +1,6 @@
 import { IText, Path, classRegistry, util, type ITextProps } from "fabric";
 
-import { DEFAULT_FONT_ID, getSingleLineFont } from "./fonts";
+import { DEFAULT_FONT_ID, SINGLE_LINE_TEXT_TYPE, getSingleLineFont } from "./fonts";
 import { appendGlyphPath, glyphAdvance } from "./singleLinePath";
 
 type SVGReviver = (markup: string) => string;
@@ -17,7 +17,7 @@ type SVGReviver = (markup: string) => string;
  * size and stroke.
  */
 export class SingleLineText extends IText {
-    static type = "SingleLineText";
+    static type = SINGLE_LINE_TEXT_TYPE;
 
     static ownDefaults: typeof IText.ownDefaults = {
         ...IText.ownDefaults,

@@ -12,7 +12,7 @@ import {
   type SetStateAction,
 } from "react";
 
-import type { Canvas as FabricCanvas } from "fabric";
+import type { Canvas as FabricCanvas, FabricObject } from "fabric";
 
 export interface CanvasConfig {
     width: number;
@@ -22,9 +22,12 @@ export interface CanvasConfig {
     maxHeight: number;
 }
 
-interface WorkspaceInstance {
+export interface WorkspaceInstance {
     getCanvas: () => FabricCanvas;
     destroy: () => void;
+    getWorkspace: () => FabricObject;
+    setZoomAuto: () => void;
+    setActive: (active: boolean) => void;
 }
 
 interface RulerInstance {
@@ -84,8 +87,8 @@ export function CanvasProvider({
     const [plotCanvasState, setPlotCanvasState] = useState<unknown>(null);
 
     const [canvasConfig, setCanvasConfig] = useState<CanvasConfig>({
-        width: 210,
-        height: 297,
+        width: 690,
+        height: 290,
         orientation: "vertical",
         maxWidth: 298,
         maxHeight: 420,

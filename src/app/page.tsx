@@ -1,10 +1,5 @@
-import { WorkspaceSurface } from "@/features/workspace/components/WorkspaceSurface";
-import { WorkspaceProviders } from "@/features/workspace/WorkspaceProvider";
+import { ModeShell } from "@/features/modes/ModeShell";
 
 export default function Home() {
-  return (
-    <WorkspaceProviders>
-      <WorkspaceSurface />
-    </WorkspaceProviders>
-  );
+  return <ModeShell />;
 }

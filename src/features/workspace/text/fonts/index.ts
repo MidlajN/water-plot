@@ -22,17 +22,23 @@ export interface SingleLineFont {
     glyphs: Record<string, [number, string?]>;
 }
 
-const FONT_LIST = [
-    HersheySans1,
-    HersheySansMed,
-    HersheySerifMed,
-    HersheyScript1,
-] as unknown as SingleLineFont[];
+/** Bundled fonts in picker order, with the short label shown in the UI. */
+const FONT_LIST = (
+    [
+        [HersheySans1, "Sans"],
+        [HersheySansMed, "Sans Medium"],
+        [HersheySerifMed, "Serif"],
+        [HersheyScript1, "Script"],
+    ] as unknown as [SingleLineFont, string][]
+).map(([font, label]) => ({ ...font, label }));
 
 export const DEFAULT_FONT_ID = "HersheySans1";
 
-export const SINGLE_LINE_FONTS: ReadonlyArray<Pick<SingleLineFont, "id" | "name">> =
-    FONT_LIST.map(({ id, name }) => ({ id, name }));
+/** Fabric class type of SingleLineText; lives here so UI code can check it without importing Fabric. */
+export const SINGLE_LINE_TEXT_TYPE = "SingleLineText";
+
+export const SINGLE_LINE_FONTS: ReadonlyArray<{ id: string; label: string }> =
+    FONT_LIST.map(({ id, label }) => ({ id, label }));
 
 const FONTS = new Map(FONT_LIST.map((font) => [font.id, font]));
 

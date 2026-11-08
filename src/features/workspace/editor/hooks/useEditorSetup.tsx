@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable react-hooks/immutability -- this hook drives the imperative Fabric canvas from context by design. */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { Canvas, FabricObject } from "fabric";
 
 import useCanvas from "../../canvas/CanvasContext";
@@ -32,6 +32,12 @@ export function useEditorSetup() {
     const workspace = canvasContext?.workspace ?? null;
     const toolRef = canvasContext?.toolRef;
 
+    // Read through a ref so changing font mid-edit does not restart the tool and end editing.
+    const fontFamilyRef = useRef(fontFamily);
+    useEffect(() => {
+        fontFamilyRef.current = fontFamily;
+    }, [fontFamily]);
+
     // Keep the Fabric tool behavior synchronized with editor state.
     useEffect(() => {
         if (!canvas) return;
@@ -39,7 +45,6 @@ export function useEditorSetup() {
         let disposed = false;
         let cleanupTool = () => {};
 
-        const previousBodyCursor = document.body.style.cursor;
         const previousSelectability = new Map<FabricObject, boolean>();
 
         // Shapes are added while dragging; history is paused so only the finished shape is saved.
@@ -97,7 +102,6 @@ export function useEditorSetup() {
             canvas.hoverCursor = "move";
 
             restoreObjectSelection();
-            document.body.style.cursor = previousBodyCursor;
             canvas.requestRenderAll();
         };
 
@@ -316,7 +320,7 @@ export function useEditorSetup() {
                     const text = new SingleLineText("", {
                         left: pointer.x,
                         top: pointer.y,
-                        fontFamily,
+                        fontFamily: fontFamilyRef.current,
                         fontSize: DEFAULT_FONT_SIZE,
                         stroke: DEFAULT_STROKE,
                     });
@@ -354,20 +358,6 @@ export function useEditorSetup() {
                 return;
             }
 
-            /* ---------------------------------------
-             * DRAG TOOL
-             * ------------------------------------- */
-
-            if (tool === "Drag") {
-                commonSetup("grab");
-                document.body.style.cursor = "grab";
-
-                cleanupTool = () => {
-                    document.body.style.cursor = previousBodyCursor;
-                };
-                return;
-            }
-
             // Select is the default state, already restored by resetCanvas.
         };
 
@@ -379,7 +369,7 @@ export function useEditorSetup() {
             disposed = true;
             resetCanvas();
         };
-    }, [canvas, workspace, toolRef, tool, element, fontFamily]);
+    }, [canvas, workspace, toolRef, tool, element]);
 
     // Escape always switches back to Select.
     useEffect(() => {

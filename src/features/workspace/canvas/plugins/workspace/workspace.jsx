@@ -29,7 +29,8 @@ export class Workspace {
         this.canvas = null;
         this.copiedObject = null;
         this.zoomRatio = 0.75;
-        this.dragMode = false;
+        // When false (another app mode is showing), keyboard shortcuts leave the canvas alone.
+        this.active = true;
         this.undoStack = [];
         this.redoStack = [];
         this.isUndoRedo = false;
@@ -37,7 +38,8 @@ export class Workspace {
         this.eventHandlers = {
             handleKeydown: this.handleKeydown.bind(this),
             highlightObj: this.hightlightObject.bind(this),
-            saveState: this.saveState.bind(this)
+            saveState: this.saveState.bind(this),
+            blockWheel: (e) => e.preventDefault(),
         }
 
         this.initCanvas();
@@ -45,8 +47,7 @@ export class Workspace {
         this.initWorkspace();
         this.initResizeObserver();
         this.initObjectBorder()
-        this.initDrag();
-        this.bindMouseWheel();
+        this.lockViewport();
         this.bindHotKeys();
     }
 
@@ -93,61 +94,6 @@ export class Workspace {
 
         this.observer = new ResizeObserver(this.resizeHandler);
         this.observer.observe(this.container);
-    }
-
-    initDrag() {
-        this.canvas.on('mouse:down', (evt) => {
-            const event = evt.e;
-            if (this.dragMode) {
-                this.canvas.setCursor('grabbing');
-                this.canvas.discardActiveObject();
-
-                this.canvas.selection = false;
-                this.canvas.getObjects().forEach(obj => {
-                    obj.selectable = false
-                });
-
-                this.isDragging = true;
-                this.lastPosX = event.clientX;
-                this.lastPosY = event.clientY;
-                this.canvas.renderAll();
-            }
-        });
-
-        this.canvas.on('mouse:move', (evt) => {
-            const event = evt.e;
-            if (this.dragMode) this.canvas.setCursor('grab')
-            if (this.isDragging) {
-                if (!this.canvas.viewportTransform) return;
-                this.canvas.setCursor('grabbing');
-                this.canvas.discardActiveObject();
-
-                const viewPort = this.canvas.viewportTransform;
-                viewPort[4] += event.clientX - this.lastPosX;
-                viewPort[5] += event.clientY - this.lastPosY;
-                this.lastPosX = event.clientX;
-                this.lastPosY = event.clientY;
-                this.canvas.renderAll()
-            }
-        });
-
-        this.canvas.on('mouse:up', () => {
-            if (this.dragMode) {
-                if (!this.canvas.viewportTransform) return;
-                this.canvas.setViewportTransform(this.canvas.viewportTransform);
-                this.isDragging = false;
-                this.canvas.setCursor('grab');
-
-                if (this.toolRef.current !== 'Select') return;
-
-                this.canvas.selection = true;
-                this.canvas.getObjects().forEach(obj => {
-                    if (obj.name !== 'workspace' && obj.hasControls) {
-                        obj.selectable = true
-                    }
-                });
-            }
-        });
     }
 
     initObjectBorder() {
@@ -272,6 +218,7 @@ export class Workspace {
 
                     obj.setCoords();
                 })
+                this.setZoomAuto();
             })
         } catch (err) {
             console.log('Error Occured in the workspace loadFromJSON : ', err)
@@ -303,59 +250,25 @@ export class Workspace {
     }
 
 
-    startDrag() {
-        this.dragMode = true;
-        this.canvas.setCursor('grab')
-        this.emit('dragMode', true)
-        this.canvas.renderAll();
-    }
-
-    endDrag() {
-        this.dragMode = false;
-        this.canvas.setCursor('default');
-        this.isDragging = false;
-        this.emit('dragMode', false)
-        this.canvas.renderAll();
-    }
-
-    bindMouseWheel() {
-        this.canvas.on('mouse:wheel', (event) => {
-            let zoom = this.canvas.getZoom();
-            zoom *= 0.999 ** event.e.deltaY;
-            zoom = Math.min(Math.max(zoom, 0.05), 20);
-
-            const pointer = this.canvas.getPointer(event.e, true);
-            this.canvas.zoomToPoint(
-                new Point(
-                    parseFloat(pointer.x.toFixed(2)),
-                    parseFloat(pointer.y.toFixed(2)),
-                ), zoom
-            )
-            event.e.preventDefault();
-            event.e.stopPropagation()
-        })
+    /**
+     * The view always fits the page: no wheel zoom, no panning. Wheel events over the
+     * canvas are swallowed so Ctrl+wheel or a trackpad pinch doesn't zoom the whole page.
+     */
+    lockViewport() {
+        this.container.addEventListener('wheel', this.eventHandlers.blockWheel, { passive: false });
     }
 
     bindHotKeys() {
         window.addEventListener('keydown', this.eventHandlers.handleKeydown);
+    }
 
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space') {
-                if (!this.dragMode) {
-                    const active = this.canvas.getActiveObject();
-                    if (active && active.isEditing === true) return
-                    this.startDrag()
-                }
-            }
-        });
-        window.addEventListener('keyup', (e) => {
-            if (e.code === 'Space') {
-                this.endDrag()
-            }
-        });
+    /** Enables or disables keyboard shortcuts, e.g. while the editor is hidden. */
+    setActive(active) {
+        this.active = active;
     }
 
     handleKeydown(e) {
+        if (!this.active) return;
         const key = e.key.toLowerCase();
         const isCtrl = e.ctrlKey || e.metaKey;
         const activeEl = document.activeElement;
@@ -660,6 +573,8 @@ export class Workspace {
     setZoomAuto() {
         const elWidth = this.container.offsetWidth;
         const elHeight = this.container.offsetHeight;
+        // Hidden (another app mode is showing): keep the last fit until it is visible again.
+        if (!elWidth || !elHeight) return;
         const scale = util.findScaleToFit(this.workspace, { width: elWidth , height: elHeight  });
 
         this.canvas.setWidth(util.parseUnit(`${ elWidth }px`));
@@ -680,27 +595,11 @@ export class Workspace {
         this.canvas.renderAll()
     }
 
-    zoomIn() {
-        let zoom = this.canvas.getZoom();
-        zoom += 0.05;
-
-        const center = this.canvas.getCenterPoint();
-        this.canvas.zoomToPoint(new Point(center.x, center.y), zoom)
-    }
-
-    zoomOut() {
-        let zoom = this.canvas.getZoom();
-        zoom -= 0.05;
-
-        const center = this.canvas.getCenterPoint();
-        this.canvas.zoomToPoint(new Point(center.x, center.y), zoom < 0 ? 0.01 : zoom)
-    }
-
     destroy() {
         if (this.observer && this.container) this.observer.disconnect(this.container);
         
         window.removeEventListener('keydown', this.eventHandlers.handleKeydown);
-        this.canvas.off('mouse:wheel');
+        this.container?.removeEventListener('wheel', this.eventHandlers.blockWheel);
 
         this.canvas.off('object:moving', this.eventHandlers.highlightObj);
         this.canvas.off('object:scaling', this.eventHandlers.highlightObj);

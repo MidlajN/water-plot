@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useReducer } from "react";
-import { loadSVGFromString, util } from "fabric";
-
+import { useCallback, useEffect, useReducer, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { exportCanvasToSvg } from "../canvas/exportSvg";
 import useCanvas from "../canvas/CanvasContext";
 import { SideNav } from "../editor/nav/SideBar";
+import { FontPicker } from "../editor/nav/FontPicker";
 import { useEditor } from "../editor/EditorContext";
+import { useMode } from "../../modes/ModeContext";
 
 import type {
   DrawingElement,
@@ -13,6 +15,13 @@ import type {
 } from "../editor/EditorContext";
 
 const DEFAULT_STROKE = "#111111";
+
+const EXPORT_FORMATS = {
+  svg: { label: "SVG", endpoint: "/api/export/svg", filename: "plotter-export.svg" },
+  gcode: { label: "G-code", endpoint: "/api/export/gcode", filename: "plotter-export.gcode" },
+} as const;
+
+type ExportFormat = keyof typeof EXPORT_FORMATS;
 
 /*
  * Temporary compatibility state for the existing SideNav.
@@ -84,7 +93,10 @@ export function WorkspaceSurface() {
     canvasRef,
     containerRef,
     canvas,
+    workspace,
   } = canvasContext;
+
+  const [exporting, setExporting] = useState<ExportFormat | null>(null);
 
   const {
     tool,
@@ -93,6 +105,24 @@ export function WorkspaceSurface() {
     setElement,
   } = useEditor();
 
+
+  const isEditMode = useMode().mode === "edit";
+
+  // While another mode is showing, the hidden editor must not react to keys, and any
+  // selection or text edit is closed. Coming back refits the page to the window.
+  useEffect(() => {
+    if (!canvas || !workspace) return;
+
+    workspace.setActive(isEditMode);
+
+    if (isEditMode) {
+      workspace.setZoomAuto();
+    } else {
+      canvas.discardActiveObject();
+      canvas.requestRenderAll();
+      setTool("Select");
+    }
+  }, [canvas, workspace, isEditMode, setTool]);
 
   // Only navigation/layout state remains in the reducer.
   const [layoutState, dispatchLayout] = useReducer(
@@ -272,14 +302,72 @@ export function WorkspaceSurface() {
     };
   }, [canvas]);
 
+  const handleExport = async (format: ExportFormat) => {
+    if (!canvas || !workspace || exporting) return;
+
+    const { endpoint, filename, label } = EXPORT_FORMATS[format];
+
+    setExporting(format);
+
+    try {
+      // Generate the SVG from the live Fabric canvas and send it to the Next.js API.
+      const svg = exportCanvasToSvg(canvas, workspace);
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "image/svg+xml",
+        },
+        body: svg,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error ?? `${label} export failed.`);
+      }
+
+      // Download exactly what the server returned.
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(`${label} export failed:`, error);
+      alert(
+        error instanceof Error ? error.message : `${label} export failed.`,
+      );
+    } finally {
+      setExporting(null);
+    }
+  };
+
     return (
-        <div className="flex h-screen overflow-hidden">
+        <div className={`h-screen overflow-hidden ${isEditMode ? "flex" : "hidden"}`}>
+
+          <div className="absolute left-4 top-4 z-20 flex gap-2">
+            {(Object.keys(EXPORT_FORMATS) as ExportFormat[]).map((format) => (
+              <Button
+                key={format}
+                onClick={() => handleExport(format)}
+                disabled={!canvas || !workspace || exporting !== null}
+              >
+                {exporting === format
+                  ? "Exporting..."
+                  : `Export ${EXPORT_FORMATS[format].label}`}
+              </Button>
+            ))}
+          </div>
             <SideNav
                 state={navState}
                 dispatch={dispatch}
             />
 
-            <main className="min-w-0 flex-1">
+            <main className="relative min-w-0 flex-1">
+                <FontPicker />
+
                 <div
                 ref={containerRef}
                 className="relative h-full w-full overflow-hidden border bg-gray-200"

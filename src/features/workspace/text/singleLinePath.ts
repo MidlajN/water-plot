@@ -40,6 +40,24 @@ export function glyphAdvance(font: SingleLineFont, char: string, fontSize: numbe
     return (resolveGlyph(font, char)[0] * fontSize) / font.unitsPerEm;
 }
 
+/** Path data for a single line of text with its baseline at y = ascent, e.g. for previews. */
+export function textToPathData(font: SingleLineFont, text: string, fontSize: number) {
+    const out: string[] = [];
+    const baseline = (font.ascent * fontSize) / font.unitsPerEm;
+    let x = 0;
+
+    for (const char of text) {
+        appendGlyphPath(out, font, char, x, baseline, fontSize);
+        x += glyphAdvance(font, char, fontSize);
+    }
+
+    return {
+        d: out.join(" "),
+        width: x,
+        height: ((font.ascent - font.descent) * fontSize) / font.unitsPerEm,
+    };
+}
+
 /**
  * Appends the SVG path data for one character, with its origin at (x, baseline)
  * in canvas coordinates (y pointing down).

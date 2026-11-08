@@ -17,7 +17,6 @@ export type EditorTool =
   | "Pen"
   | "Lines"
   | "Elements"
-  | "Drag"
   | "Plot";
 
 export type DrawingElement = "rectangle" | "circle" | "triangle";
