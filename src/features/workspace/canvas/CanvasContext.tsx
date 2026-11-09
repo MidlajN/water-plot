@@ -30,6 +30,10 @@ export interface WorkspaceInstance {
     setActive: (active: boolean) => void;
     /** Restores the drawing saved when the page was last closed. */
     loadFromJSON: () => Promise<void>;
+    undo: () => void;
+    redo: () => void;
+    /** Removes the selected object(s). */
+    handleDelete: () => void;
 }
 
 interface RulerInstance {

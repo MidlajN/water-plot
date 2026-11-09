@@ -1,4 +1,6 @@
 allowBuilds:
+  better-sqlite3: true
   canvas: set this to true or false
+  esbuild: true
   sharp: false
   unrs-resolver: false

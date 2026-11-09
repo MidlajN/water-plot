@@ -48,7 +48,7 @@ function ToolButton({ item }: { item: ToolItem }) {
 export function SideNav() {
     return (
         <motion.div
-            className="absolute left-8 top-1/2 z-10 flex flex-col items-center justify-center gap-2"
+            className="absolute left-8 top-1/2 z-10 hidden flex-col items-center justify-center gap-2 md:flex"
             initial={{ opacity: 0, translateX: -20, translateY: "-50%" }}
             animate={{ opacity: 1, translateX: 0, translateY: "-50%" }}
             exit={{ opacity: 0, translateX: -20 }}

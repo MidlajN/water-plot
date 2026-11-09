@@ -3,8 +3,7 @@
 import type { Canvas as FabricCanvas, FabricObject } from "fabric";
 
 import type { WorkspaceInstance } from "./CanvasContext";
-
-const DEFAULT_STROKE = "#111111";
+import { DEFAULT_STROKE, placeAtPageCentre } from "./placeOnPage";
 
 /**
  * Parses SVG markup into one Fabric object styled as pen strokes (stroke only, no fill).
@@ -29,15 +28,5 @@ const ILLUSTRATION_SIZE = 0.3;
 export async function addSvgToPage(canvas: FabricCanvas, workspace: WorkspaceInstance, svg: string) {
     const object = await svgToObject(svg);
     if (!object) throw new Error("The illustration has nothing to draw.");
-
-    const page = workspace.getWorkspace();
-    const target = Math.min(page.width * page.scaleX, page.height * page.scaleY) * ILLUSTRATION_SIZE;
-    object.scale(target / Math.max(object.width, object.height));
-    object.setPositionByOrigin(page.getCenterPoint(), "center", "center");
-    object.setCoords();
-
-    canvas.add(object);
-    canvas.setActiveObject(object);
-    canvas.requestRenderAll();
-    return object;
+    return placeAtPageCentre(canvas, workspace, object, ILLUSTRATION_SIZE);
 }

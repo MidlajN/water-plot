@@ -1,21 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { exportCanvasToSvg } from "../canvas/exportSvg";
+import { EXPORT_FORMATS, useExport, type ExportFormat } from "../../export/useExport";
 import { svgToObject } from "../canvas/insertSvg";
 import useCanvas from "../canvas/CanvasContext";
 import { SideNav } from "../editor/nav/SideBar";
 import { FontPicker } from "../editor/nav/FontPicker";
 import { useEditor } from "../editor/EditorContext";
 import { useMode } from "../../modes/ModeContext";
-
-const EXPORT_FORMATS = {
-  svg: { label: "SVG", endpoint: "/api/export/svg", filename: "plotter-export.svg" },
-  gcode: { label: "G-code", endpoint: "/api/export/gcode", filename: "plotter-export.gcode" },
-} as const;
-
-type ExportFormat = keyof typeof EXPORT_FORMATS;
 
 export function WorkspaceSurface() {
   const canvasContext = useCanvas();
@@ -33,7 +26,7 @@ export function WorkspaceSurface() {
     workspace,
   } = canvasContext;
 
-  const [exporting, setExporting] = useState<ExportFormat | null>(null);
+  const { exporting, exportAs, ready } = useExport();
 
   const { setTool } = useEditor();
 
@@ -98,57 +91,16 @@ export function WorkspaceSurface() {
     };
   }, [canvas]);
 
-  const handleExport = async (format: ExportFormat) => {
-    if (!canvas || !workspace || exporting) return;
-
-    const { endpoint, filename, label } = EXPORT_FORMATS[format];
-
-    setExporting(format);
-
-    try {
-      // Generate the SVG from the live Fabric canvas and send it to the Next.js API.
-      const svg = exportCanvasToSvg(canvas, workspace);
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "image/svg+xml",
-        },
-        body: svg,
-      });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.error ?? `${label} export failed.`);
-      }
-
-      // Download exactly what the server returned.
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error(`${label} export failed:`, error);
-      alert(
-        error instanceof Error ? error.message : `${label} export failed.`,
-      );
-    } finally {
-      setExporting(null);
-    }
-  };
-
     return (
-        <div className={`h-screen overflow-hidden ${isEditMode ? "flex" : "hidden"}`}>
+        // Mobile: the page fills the top half; the bottom card (MobileSheet) holds the controls.
+        <div className={`h-[52dvh] overflow-hidden md:h-screen ${isEditMode ? "flex" : "hidden"}`}>
 
-          <div className="absolute left-4 top-4 z-20 flex gap-2">
+          <div className="absolute left-4 top-4 z-20 hidden gap-2 md:flex">
             {(Object.keys(EXPORT_FORMATS) as ExportFormat[]).map((format) => (
               <Button
                 key={format}
-                onClick={() => handleExport(format)}
-                disabled={!canvas || !workspace || exporting !== null}
+                onClick={() => exportAs(format)}
+                disabled={!ready || exporting !== null}
               >
                 {exporting === format
                   ? "Exporting..."
