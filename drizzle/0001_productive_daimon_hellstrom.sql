@@ -1,0 +1,1 @@
+ALTER TABLE `plot_jobs` ADD `svg_path` text;

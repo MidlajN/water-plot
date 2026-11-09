@@ -25,6 +25,7 @@ export const plotJobs = sqliteTable("plot_jobs", {
         startedAt: text("started_at"),
         completedAt: text("completed_at"),
         createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+        svgPath: text("svg_path"),
         
     }, (table) => [index("plot_jobs_status_idx").on(table.status)],
 );
