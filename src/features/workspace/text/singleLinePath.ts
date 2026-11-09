@@ -40,20 +40,22 @@ export function glyphAdvance(font: SingleLineFont, char: string, fontSize: numbe
     return (resolveGlyph(font, char)[0] * fontSize) / font.unitsPerEm;
 }
 
+/** Width of a line of text at the given font size. */
+export function measureText(font: SingleLineFont, text: string, fontSize: number): number {
+    let width = 0;
+    for (const char of text) width += glyphAdvance(font, char, fontSize);
+    return width;
+}
+
 /** Path data for a single line of text with its baseline at y = ascent, e.g. for previews. */
 export function textToPathData(font: SingleLineFont, text: string, fontSize: number) {
     const writer = new GlyphPathWriter(font, fontSize);
     const baseline = (font.ascent * fontSize) / font.unitsPerEm;
-    let x = 0;
-
-    for (const char of text) {
-        writer.add(char, x, baseline);
-        x += glyphAdvance(font, char, fontSize);
-    }
+    writer.addLine(text, 0, baseline);
 
     return {
         d: writer.finish(),
-        width: x,
+        width: measureText(font, text, fontSize),
         height: ((font.ascent - font.descent) * fontSize) / font.unitsPerEm,
     };
 }
@@ -93,6 +95,15 @@ export class GlyphPathWriter {
                 target.push(String(round(x + coords[i] * scale)), String(round(baseline - coords[i + 1] * scale)));
             }
         }
+    }
+
+    /** Adds a line of text starting at (x, baseline), then ends its last word. */
+    addLine(text: string, x: number, baseline: number) {
+        for (const char of text) {
+            this.add(char, x, baseline);
+            x += glyphAdvance(this.font, char, this.fontSize);
+        }
+        this.endWord();
     }
 
     /** Flushes the current word's marks; call at the end of each line. */

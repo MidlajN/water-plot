@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { EXPORT_FORMATS, useExport, type ExportFormat } from "../../export/useExport";
 import { svgToObject } from "../canvas/insertSvg";
 import useCanvas from "../canvas/CanvasContext";
 import { SideNav } from "../editor/nav/SideBar";
@@ -25,8 +23,6 @@ export function WorkspaceSurface() {
     canvas,
     workspace,
   } = canvasContext;
-
-  const { exporting, exportAs, ready } = useExport();
 
   const { setTool } = useEditor();
 
@@ -93,21 +89,8 @@ export function WorkspaceSurface() {
 
     return (
         // Mobile: the page fills the top half; the bottom card (MobileSheet) holds the controls.
-        <div className={`h-[52dvh] overflow-hidden md:h-screen ${isEditMode ? "flex" : "hidden"}`}>
+        <div className={`relative h-[52dvh] overflow-hidden md:h-full ${isEditMode ? "flex" : "hidden"}`}>
 
-          <div className="absolute left-4 top-4 z-20 hidden gap-2 md:flex">
-            {(Object.keys(EXPORT_FORMATS) as ExportFormat[]).map((format) => (
-              <Button
-                key={format}
-                onClick={() => exportAs(format)}
-                disabled={!ready || exporting !== null}
-              >
-                {exporting === format
-                  ? "Exporting..."
-                  : `Export ${EXPORT_FORMATS[format].label}`}
-              </Button>
-            ))}
-          </div>
             <SideNav />
 
             <main className="relative min-w-0 flex-1">
@@ -115,7 +98,7 @@ export function WorkspaceSurface() {
 
                 <div
                 ref={containerRef}
-                className="relative h-full w-full overflow-hidden border bg-gray-200"
+                className="relative h-full w-full overflow-hidden border bg-gray-200 md:border-0 md:bg-desk"
                 >
                 <canvas ref={canvasRef} />
                 </div>

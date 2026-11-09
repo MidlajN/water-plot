@@ -44,18 +44,18 @@ function ToolButton({ item }: { item: ToolItem }) {
     );
 }
 
-/** Floating tool bar on the left of the editor. */
+/** Slim tool rail on the left edge of the desktop viewer. */
 export function SideNav() {
     return (
         <motion.div
-            className="absolute left-8 top-1/2 z-10 hidden flex-col items-center justify-center gap-2 md:flex"
+            className="absolute left-4 top-1/2 z-10 hidden flex-col items-center justify-center gap-2 md:flex"
             initial={{ opacity: 0, translateX: -20, translateY: "-50%" }}
             animate={{ opacity: 1, translateX: 0, translateY: "-50%" }}
             exit={{ opacity: 0, translateX: -20 }}
             transition={{ duration: 0.5 }}
         >
-            <nav aria-label="Tools" className="rounded-lg shadow-md">
-                <ul className="flex flex-col rounded-lg bg-white shadow-sm">
+            <nav aria-label="Tools" className="rounded-[10px] border border-rule bg-white p-1 shadow-[0_1px_2px_rgba(31,39,51,0.06)]">
+                <ul className="flex flex-col gap-0.5">
                     <ToolButton item={SELECT} />
                     <ToolButton item={PEN} />
                     <ElementsMenu />

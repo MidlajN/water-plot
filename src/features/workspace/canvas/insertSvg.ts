@@ -5,6 +5,9 @@ import type { Canvas as FabricCanvas, FabricObject } from "fabric";
 import type { WorkspaceInstance } from "./CanvasContext";
 import { DEFAULT_STROKE, placeAtPageCentre } from "./placeOnPage";
 
+/** Stroke width (canvas px, unscaled) given to imported SVG strokes. */
+export const SVG_STROKE_WIDTH = 2;
+
 /**
  * Parses SVG markup into one Fabric object styled as pen strokes (stroke only, no fill).
  * Returns null when the SVG has nothing drawable.
@@ -16,7 +19,7 @@ export async function svgToObject(svg: string): Promise<FabricObject | null> {
     if (!drawable.length) return null;
 
     drawable.forEach((object) =>
-        object.set({ stroke: DEFAULT_STROKE, strokeWidth: 2, strokeUniform: true, fill: "transparent" }),
+        object.set({ stroke: DEFAULT_STROKE, strokeWidth: SVG_STROKE_WIDTH, strokeUniform: true, fill: "transparent" }),
     );
     return util.groupSVGElements(drawable, options);
 }

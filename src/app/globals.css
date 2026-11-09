@@ -4,6 +4,19 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Plotter Studio desktop palette (see the desktop sidebar | viewer design). */
+@theme {
+  --color-ink: #1f2733;
+  --color-graphite: #5f6b7a;
+  --color-rule: #e3e7ea;
+  --color-desk: #eceff1;
+  --color-teal: #1c8096;
+  --color-teal-dark: #166a7c;
+  --color-ok: #2f8f62;
+  --color-caution: #b7791f;
+  --color-fault: #c0392b;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

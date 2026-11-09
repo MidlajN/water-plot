@@ -30,7 +30,15 @@ export function ModeTabs({ className = "", fill = false }: { className?: string;
     );
 }
 
-/** Floating mode switcher, top-right on desktop (the mobile card has its own). */
-export function ModeSwitcher() {
-    return <ModeTabs className="fixed right-6 top-6 z-20 hidden bg-white shadow-md md:flex" />;
+/** Shows why the last Auto mode switch failed, if it did. */
+export function AutoModeError({ className = "" }: { className?: string }) {
+    const { autoError } = useMode();
+    if (!autoError) return null;
+
+    return (
+        <p role="alert" className={`text-xs text-red-600 ${className}`}>
+            {autoError}
+        </p>
+    );
 }
+

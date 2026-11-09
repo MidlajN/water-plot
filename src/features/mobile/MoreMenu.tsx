@@ -2,17 +2,19 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowArcLeft, ArrowArcRight, DotsThree, DownloadSimple, Trash } from "@phosphor-icons/react";
+import { ArrowArcLeft, ArrowArcRight, DotsThree, DownloadSimple, FileArrowUp, Trash } from "@phosphor-icons/react";
 
 import { useExport } from "../export/useExport";
 import { useMode } from "../modes/ModeContext";
+import { usePlotter } from "../plotter/PlotterContext";
 import useCanvas from "../workspace/canvas/CanvasContext";
 
-/** "⋯" button in the mobile card footer: export, undo, redo and delete. */
+/** "⋯" button in the mobile card footer: export, plot a G-code file, undo, redo and delete. */
 export function MoreMenu() {
     const { workspace } = useCanvas() ?? {};
     const { exporting, exportAs, ready } = useExport();
     const isEditMode = useMode().mode === "edit";
+    const plotter = usePlotter();
     const [open, setOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -70,6 +72,13 @@ export function MoreMenu() {
                         </MenuItem>
                         <MenuItem icon={<DownloadSimple size={18} />} disabled={!ready || exporting !== null} onClick={run(() => void exportAs("gcode"))}>
                             {exporting === "gcode" ? "Exporting…" : "Export G-code"}
+                        </MenuItem>
+                        <MenuItem
+                            icon={<FileArrowUp size={18} />}
+                            disabled={!plotter.gatewayConnected || plotter.busy || plotter.sending}
+                            onClick={run(plotter.pickFile)}
+                        >
+                            Plot G-code file…
                         </MenuItem>
                         <div aria-hidden className="my-1 h-px bg-gray-100" />
                         <MenuItem icon={<ArrowArcLeft size={18} />} disabled={!workspace || !isEditMode} onClick={run(() => workspace?.undo())}>

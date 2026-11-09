@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { Converter, type ConverterSettings } from "svg-to-gcode";
+import type { ConverterSettings } from "svg-to-gcode";
 import { readSvgRequest } from "@/features/export/readSvgRequest";
+import { convertSvgToGcode, type GcodeResult } from "@/features/export/svgToGcode";
 
 /**
  * POST /api/export/gcode
@@ -8,16 +9,15 @@ import { readSvgRequest } from "@/features/export/readSvgRequest";
  * Body: the SVG document (`Content-Type: image/svg+xml`). SVG user units are
  * read as 96 dpi px and converted to mm.
  *
- * Optional query parameters override the machine settings, e.g.
+ * Uses the plotter profile (pen heights, drawing feed) and always applies its pen
+ * safety rules: Z moves are G1 at no more than F1000.
+ *
+ * Optional query parameters override the profile's settings, e.g.
  * `?feedRate=3000&zValue=-15&bedWidth=452&bedHeight=305&quadrant=3`.
  *
  * Returns the G-code as text, with the estimated plot time (seconds) in the
  * `X-Estimated-Time` header.
  */
-
-const DEFAULT_SETTINGS: ConverterSettings = {
-    tolerance: 0.3,
-};
 
 const NUMERIC_SETTINGS = [
     "feedRate",
@@ -34,7 +34,7 @@ const NUMERIC_SETTINGS = [
 const POSITIVE_SETTINGS = new Set<string>(["feedRate", "seekRate", "tolerance"]);
 
 function parseSettings(params: URLSearchParams): ConverterSettings | string {
-    const settings: ConverterSettings = { ...DEFAULT_SETTINGS };
+    const settings: ConverterSettings = {};
 
     for (const key of NUMERIC_SETTINGS) {
         const raw = params.get(key);
@@ -87,10 +87,10 @@ export async function POST(request: Request) {
     const body = await readSvgRequest(request);
     if (!body.ok) return body.response;
 
-    let result: Awaited<ReturnType<Converter["convert"]>>;
+    let result: GcodeResult;
 
     try {
-        result = await new Converter(settings).convert(body.svg);
+        result = await convertSvgToGcode(body.svg, settings);
     } catch (error) {
         console.error("G-code conversion failed:", error);
         return NextResponse.json(

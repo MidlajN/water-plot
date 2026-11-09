@@ -1,13 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PaperPlaneTilt, Shapes, SquaresFour } from "@phosphor-icons/react";
 
-import { APP_MODES, useMode } from "../modes/ModeContext";
-import { ModeTabs } from "../modes/ModeSwitcher";
+import { useMode } from "../modes/ModeContext";
+import { AutoModeError, ModeTabs } from "../modes/ModeSwitcher";
+import { AutoSection } from "../desktop/AutoSection";
+import { AiComposer } from "../ai/components/AiComposer";
 import { useEditor } from "../workspace/editor/EditorContext";
 import { PencilIcon, SelectIcon, TextIcon } from "../workspace/editor/nav/icons";
+import { usePlotter } from "../plotter/PlotterContext";
+import { PlotterHud, PlotterStatus } from "../plotter/PlotterHud";
 import { ElementsCarousel } from "./ElementsCarousel";
 import { Joystick } from "./Joystick";
 import { MobileTextEditor, type TextEditorHandle } from "./MobileTextEditor";
@@ -121,7 +125,9 @@ export function MobileSheet() {
                         {activePanel === "mode" && (
                             <div className="space-y-3">
                                 <ModeTabs fill className="bg-gray-50" />
-                                {!isEditMode && <Hint>{APP_MODES.find(({ id }) => id === mode)?.label} mode is coming soon.</Hint>}
+                                <AutoModeError className="text-center" />
+                                {mode === "auto" && <AutoSection />}
+                                {mode === "ai" && <AiComposer compact />}
                             </div>
                         )}
                     </motion.div>
@@ -138,32 +144,38 @@ function Hint({ children }: { children: ReactNode }) {
 }
 
 function Footer() {
-    const [notice, setNotice] = useState(false);
-
-    useEffect(() => {
-        if (!notice) return;
-        const timeout = setTimeout(() => setNotice(false), 2500);
-        return () => clearTimeout(timeout);
-    }, [notice]);
+    const { send, sending, busy, gatewayConnected, error, dismiss, job } = usePlotter();
+    const isEditMode = useMode().mode === "edit";
 
     return (
-        <footer className="shrink-0 border-t border-gray-100 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            {notice && (
-                <p role="status" className="mb-2 text-center text-xs text-gray-500">
-                    Sending is coming soon.
+        <footer className="shrink-0 space-y-2 border-t border-gray-100 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <PlotterHud compact />
+            {error && (
+                <p role="alert" className="flex items-center justify-center gap-2 text-center text-xs text-red-600">
+                    {error}
+                    <button type="button" onClick={dismiss} className="font-medium underline">
+                        OK
+                    </button>
                 </p>
             )}
             <div className="flex items-center gap-2">
                 <button
                     type="button"
-                    onClick={() => setNotice(true)}
-                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#1c8096] text-sm font-medium text-white transition-opacity active:opacity-80"
+                    onClick={() => void send()}
+                    disabled={!isEditMode || !gatewayConnected || busy || sending}
+                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#1c8096] text-sm font-medium text-white transition-opacity active:opacity-80 disabled:opacity-45"
                 >
                     <PaperPlaneTilt size={18} weight="bold" />
-                    Send
+                    {sending ? "Sending…" : busy ? "Plotting…" : "Send"}
                 </button>
                 <MoreMenu />
             </div>
+            {/* The progress card shows the status itself while a plot is up. */}
+            {!job && (
+                <div className="flex justify-center">
+                    <PlotterStatus />
+                </div>
+            )}
         </footer>
     );
 }

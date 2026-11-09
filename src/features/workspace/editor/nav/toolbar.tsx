@@ -5,7 +5,9 @@ export const IDLE_COLOR = "#4b5563";
 
 /** Classes shared by every tool bar button. */
 export const toolButtonClass = (active: boolean) =>
-    `flex w-full items-center justify-center rounded-lg p-2 transition-colors duration-500 ${active ? "bg-gray-100" : ""}`;
+    `flex h-10 w-10 items-center justify-center rounded-lg transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-teal ${
+        active ? "bg-teal/10" : "hover:bg-desk"
+    }`;
 
 /** Hover label to the right of a tool bar button. */
 export function ToolTooltip({ label, hidden = false }: { label: string; hidden?: boolean }) {

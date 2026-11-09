@@ -1,8 +1,10 @@
 import { eq } from "drizzle-orm";
 import { db } from "../src/lib/db";
-import { autoSettings, plotJobs } from "../src/lib/db/schema";
+import { plotJobs } from "../src/lib/db/schema";
+import { getAutoSettings } from "../src/features/auto/settings";
 import { getRandomQuote } from "./quotes";
 import { generatePlotSvg } from "./generatePlot";
+import { sendPlotJob } from "./plotterSender";
 
 const MINUTE = 60_000;
 const TIMEZONE = "Asia/Kolkata";
@@ -16,13 +18,9 @@ function waitForNextMinute() {
 }
 
 async function createPlotJob() {
-  const settings = db
-    .select()
-    .from(autoSettings)
-    .where(eq(autoSettings.id, 1))
-    .get();
+  const settings = getAutoSettings();
 
-  if (!settings?.enabled) {
+  if (!settings.enabled) {
     console.log("[Auto] Disabled. Skipping.");
     return;
   }
@@ -65,6 +63,8 @@ async function createPlotJob() {
     console.log(`[Auto] Generated SVG for job #${jobId}`);
     console.log(`[Auto] Quote: ${quote}`);
     console.log(`[Auto] SVG: ${svgPath}`);
+
+    await sendPlotJob(jobId, svgPath);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : String(error);

@@ -26,6 +26,7 @@ export const plotJobs = sqliteTable("plot_jobs", {
         completedAt: text("completed_at"),
         createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
         svgPath: text("svg_path"),
-        
+        /** Job id on the Pi gateway once the plot was sent. */
+        gatewayJobId: text("gateway_job_id"),
     }, (table) => [index("plot_jobs_status_idx").on(table.status)],
 );

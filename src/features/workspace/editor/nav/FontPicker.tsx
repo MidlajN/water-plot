@@ -18,7 +18,7 @@ export function FontPicker() {
         <AnimatePresence>
             {visible && (
                 <motion.div
-                    className="absolute left-1/2 top-6 z-10 hidden items-center gap-1 rounded-lg bg-white p-1 shadow-md md:flex"
+                    className="absolute left-1/2 top-4 z-10 hidden items-center gap-1 rounded-[10px] border border-rule bg-white p-1 shadow-[0_1px_2px_rgba(31,39,51,0.06)] md:flex"
                     initial={{ opacity: 0, x: "-50%", y: -10 }}
                     animate={{ opacity: 1, x: "-50%", y: 0 }}
                     exit={{ opacity: 0, x: "-50%", y: -10 }}
