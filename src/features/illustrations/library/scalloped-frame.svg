@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Scalloped frame</title>
+  <path d="M10 10 Q15 4 20 10 Q25 4 30 10 Q35 4 40 10 Q45 4 50 10 Q55 4 60 10 Q65 4 70 10 Q75 4 80 10 Q85 4 90 10 Q96 15 90 20 Q96 25 90 30 Q96 35 90 40 Q96 45 90 50 Q96 55 90 60 Q96 65 90 70 Q96 75 90 80 Q96 85 90 90 Q85 96 80 90 Q75 96 70 90 Q65 96 60 90 Q55 96 50 90 Q45 96 40 90 Q35 96 30 90 Q25 96 20 90 Q15 96 10 90 Q4 85 10 80 Q4 75 10 70 Q4 65 10 60 Q4 55 10 50 Q4 45 10 40 Q4 35 10 30 Q4 25 10 20 Q4 15 10 10 Z"/>
+  <rect x="18" y="18" width="64" height="64" rx="4"/>
+  <circle cx="10" cy="10" r="2"/>
+  <circle cx="90" cy="10" r="2"/>
+  <circle cx="90" cy="90" r="2"/>
+  <circle cx="10" cy="90" r="2"/>
+</svg>

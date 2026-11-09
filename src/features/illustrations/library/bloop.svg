@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Bloop</title>
+  <path d="M50 18 C72 18 84 36 84 56 C84 74 70 84 50 84 C30 84 16 74 16 56 C16 36 28 18 50 18 Z"/>
+  <path d="M41 20 C39 13 35 9 31 9"/>
+  <circle cx="28.5" cy="8.5" r="3"/>
+  <path d="M59 20 C61 13 65 9 69 9"/>
+  <circle cx="71.5" cy="8.5" r="3"/>
+  <ellipse cx="40" cy="48" rx="4.5" ry="6.5"/>
+  <ellipse cx="60" cy="48" rx="4.5" ry="6.5"/>
+  <circle cx="41.5" cy="46" r="1.5"/>
+  <circle cx="61.5" cy="46" r="1.5"/>
+  <path d="M42 62 C46 67 54 67 58 62"/>
+  <path d="M25 60 C27 58 30 58 32 60"/>
+  <path d="M68 60 C70 58 73 58 75 60"/>
+  <path d="M17 58 C10 56 7 62 11 66"/>
+  <path d="M83 58 C90 56 93 62 89 66"/>
+  <path d="M34 84 C34 91 42 91 42 84"/>
+  <path d="M58 84 C58 91 66 91 66 84"/>
+</svg>

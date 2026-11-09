@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 40" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Swirl divider</title>
+  <path d="M100 12 L108 20 L100 28 L92 20 Z"/>
+  <path d="M91 20 L66 20 C56 20 52 10 42 10 C34 10 32 18 38 19 C42 20 43 15 40 14"/>
+  <path d="M66 20 C56 20 52 30 42 30 C34 30 32 22 38 21 C42 20 43 25 40 26"/>
+  <path d="M30 20 L10 20"/>
+  <circle cx="5" cy="20" r="1.5"/>
+  <path d="M109 20 L134 20 C144 20 148 10 158 10 C166 10 168 18 162 19 C158 20 157 15 160 14"/>
+  <path d="M134 20 C144 20 148 30 158 30 C166 30 168 22 162 21 C158 20 157 25 160 26"/>
+  <path d="M170 20 L190 20"/>
+  <circle cx="195" cy="20" r="1.5"/>
+</svg>

@@ -180,10 +180,10 @@ export function useEditorSetup() {
             }
 
             /* ---------------------------------------
-             * LINE TOOL
+             * ELEMENTS TOOL: LINE
              * ------------------------------------- */
 
-            if (tool === "Lines") {
+            if (tool === "Elements" && element === "line") {
                 commonSetup("crosshair");
 
                 let line: InstanceType<typeof Line> | null = null;
@@ -233,7 +233,7 @@ export function useEditorSetup() {
             }
 
             /* ---------------------------------------
-             * ELEMENTS TOOL
+             * ELEMENTS TOOL: SHAPES
              * ------------------------------------- */
 
             if (tool === "Elements") {

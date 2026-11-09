@@ -3,13 +3,12 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { exportCanvasToSvg } from "../canvas/exportSvg";
+import { svgToObject } from "../canvas/insertSvg";
 import useCanvas from "../canvas/CanvasContext";
 import { SideNav } from "../editor/nav/SideBar";
 import { FontPicker } from "../editor/nav/FontPicker";
 import { useEditor } from "../editor/EditorContext";
 import { useMode } from "../../modes/ModeContext";
-
-const DEFAULT_STROKE = "#111111";
 
 const EXPORT_FORMATS = {
   svg: { label: "SVG", endpoint: "/api/export/svg", filename: "plotter-export.svg" },
@@ -74,38 +73,18 @@ export function WorkspaceSurface() {
       }
 
       try {
-        const { loadSVGFromString, util } = await import("fabric");
-
-        const loadedSvg = await loadSVGFromString(event.data.data);
+        const svgObject = await svgToObject(event.data.data);
 
         if (disposed) return;
 
-        const svgObjects = loadedSvg.objects.filter(
-          (object) => object !== null,
-        );
-
-        if (svgObjects.length === 0) {
+        if (!svgObject) {
           console.warn("The imported SVG contains no usable objects.");
           return;
         }
 
-        svgObjects.forEach((object) => {
-          object.set({
-            stroke: DEFAULT_STROKE,
-            strokeWidth: 2,
-            fill: "transparent",
-          });
-        });
-
-        const svgObject = util.groupSVGElements(
-          svgObjects,
-          loadedSvg.options,
-        );
-
         canvas.add(svgObject);
         canvas.setActiveObject(svgObject);
         canvas.requestRenderAll();
-
       } catch (error) {
         console.error("Unable to import SVG message:", error);
       }

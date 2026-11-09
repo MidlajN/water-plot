@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Heart vine</title>
+  <path d="M5 30 C25 10 45 50 65 30 C85 10 105 50 125 30 C145 10 165 50 185 30 C190 25 193 25 195 27"/>
+  <path d="M20 24 L20 18 M80 24 L80 18 M140 24 L140 18"/>
+  <path d="M20 18 C12 12 15 5 20 10 C25 5 28 12 20 18 Z"/>
+  <path d="M80 18 C72 12 75 5 80 10 C85 5 88 12 80 18 Z"/>
+  <path d="M140 18 C132 12 135 5 140 10 C145 5 148 12 140 18 Z"/>
+  <path d="M50 36 C46 42 48 48 52 50 C54 44 54 40 50 36 Z"/>
+  <path d="M110 36 C106 42 108 48 112 50 C114 44 114 40 110 36 Z"/>
+  <path d="M170 36 C166 42 168 48 172 50 C174 44 174 40 170 36 Z"/>
+</svg>

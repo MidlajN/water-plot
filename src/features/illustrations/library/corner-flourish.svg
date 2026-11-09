@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Corner flourish</title>
+  <path d="M8 92 L8 30 C8 16 16 8 30 8 L92 8"/>
+  <path d="M8 62 C21 62 27 53 27 43 C27 35 21 31 16 35 C12 39 15 45 20 43"/>
+  <path d="M62 8 C62 21 53 27 43 27 C35 27 31 21 35 16 C39 12 45 15 43 20"/>
+  <path d="M22 22 C34 22 44 32 44 44 C32 44 22 34 22 22 Z M22 22 L38 38"/>
+  <circle cx="8" cy="96" r="1.5"/>
+  <circle cx="96" cy="8" r="1.5"/>
+</svg>

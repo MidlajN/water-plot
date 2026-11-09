@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <title>Cat</title>
+  <path d="M30 40 L28 17 L42 28 C47 26 53 26 58 28 L72 17 L70 40 C74 54 64 62 50 62 C36 62 26 54 30 40 Z"/>
+  <path d="M38 42 C39.5 39 42.5 39 44 42"/>
+  <path d="M56 42 C57.5 39 60.5 39 62 42"/>
+  <path d="M48 48 L52 48 L50 50.5 Z"/>
+  <path d="M50 50.5 C50 54 46 55 44.5 53"/>
+  <path d="M50 50.5 C50 54 54 55 55.5 53"/>
+  <path d="M37 50 L24 48 M37 53 L24 55 M63 50 L76 48 M63 53 L76 55"/>
+  <path d="M38 60 C30 70 30 87 36 92 L64 92 C70 87 70 70 62 60"/>
+  <path d="M45 92 L45 78 M55 92 L55 78"/>
+  <path d="M66 88 C80 89 87 77 81 68 C78 64 72 66 74 70"/>
+</svg>

@@ -18,10 +18,10 @@ export type EditorTool =
   | "Select"
   | "Text"
   | "Pen"
-  | "Lines"
   | "Elements";
 
-export type DrawingElement = "rectangle" | "circle" | "triangle";
+/** Shape drawn by the Elements tool. */
+export type DrawingElement = "line" | "rectangle" | "circle" | "triangle";
 
 interface EditorContextValue {
   tool: EditorTool;

@@ -1,0 +1,86 @@
+[
+  {
+    "id": "bloop",
+    "name": "Bloop",
+    "category": "characters",
+    "file": "bloop.svg"
+  },
+  {
+    "id": "cat",
+    "name": "Cat",
+    "category": "characters",
+    "file": "cat.svg"
+  },
+  {
+    "id": "bear-cub",
+    "name": "Bear cub",
+    "category": "characters",
+    "file": "bear-cub.svg"
+  },
+  {
+    "id": "bunny",
+    "name": "Bunny",
+    "category": "characters",
+    "file": "bunny.svg"
+  },
+  {
+    "id": "owl",
+    "name": "Owl",
+    "category": "characters",
+    "file": "owl.svg"
+  },
+  {
+    "id": "fox",
+    "name": "Fox",
+    "category": "characters",
+    "file": "fox.svg"
+  },
+  {
+    "id": "robot",
+    "name": "Robot",
+    "category": "characters",
+    "file": "robot.svg"
+  },
+  {
+    "id": "baby-dragon",
+    "name": "Baby dragon",
+    "category": "characters",
+    "file": "baby-dragon.svg"
+  },
+  {
+    "id": "corner-flourish",
+    "name": "Corner flourish",
+    "category": "decorative",
+    "file": "corner-flourish.svg"
+  },
+  {
+    "id": "laurel-wreath",
+    "name": "Laurel wreath",
+    "category": "decorative",
+    "file": "laurel-wreath.svg"
+  },
+  {
+    "id": "swirl-divider",
+    "name": "Swirl divider",
+    "category": "decorative",
+    "file": "swirl-divider.svg"
+  },
+  {
+    "id": "scalloped-frame",
+    "name": "Scalloped frame",
+    "category": "decorative",
+    "file": "scalloped-frame.svg"
+  },
+  {
+    "id": "heart-vine",
+    "name": "Heart vine",
+    "category": "decorative",
+    "file": "heart-vine.svg"
+  },
+  {
+    "id": "star-burst",
+    "name": "Star burst",
+    "category": "decorative",
+    "file": "star-burst.svg"
+  }
+]
