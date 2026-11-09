@@ -28,6 +28,8 @@ export interface WorkspaceInstance {
     getWorkspace: () => FabricObject;
     setZoomAuto: () => void;
     setActive: (active: boolean) => void;
+    /** Restores the drawing saved when the page was last closed. */
+    loadFromJSON: () => Promise<void>;
 }
 
 interface RulerInstance {
@@ -43,19 +45,11 @@ interface CanvasContextValue {
     setCanvasConfig: Dispatch<SetStateAction<CanvasConfig>>;
 
     toolRef: RefObject<string>;
-    plotterRef: RefObject<unknown>;
-
-    canvasObjs: unknown[] | null;
-    setCanvasObjs: Dispatch<SetStateAction<unknown[] | null>>;
 
     containerRef: RefObject<HTMLDivElement | null>;
     workspace: WorkspaceInstance | null;
 
-    jsonExist: boolean;
-    setJsonExist: Dispatch<SetStateAction<boolean>>;
 
-    plotCanvasState: unknown;
-    setPlotCanvasState: Dispatch<SetStateAction<unknown>>;
 }
 
 const CanvasContext = createContext<CanvasContextValue | null>(null);
@@ -74,17 +68,10 @@ export function CanvasProvider({
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const plotterRef = useRef<unknown>(null);
     const toolRef = useRef("Select");
 
     const [canvas, setCanvas] = useState<FabricCanvas | null>(null);
     const [workspace, setWorkspace] = useState<WorkspaceInstance | null>(null);
-
-    const [canvasObjs, setCanvasObjs] = useState<unknown[] | null>(null);
-
-    const [jsonExist, setJsonExist] = useState(false);
-
-    const [plotCanvasState, setPlotCanvasState] = useState<unknown>(null);
 
     const [canvasConfig, setCanvasConfig] = useState<CanvasConfig>({
         width: 690,
@@ -95,7 +82,6 @@ export function CanvasProvider({
     });
 
     const initialConfigRef = useRef(canvasConfig);
-
 
     useEffect(() => {
         if (!canvasRef.current || !containerRef.current) return;
@@ -151,26 +137,11 @@ export function CanvasProvider({
             return;
         }
 
+        await instance.loadFromJSON();
+        if (disposed) return;
+
         setWorkspace(instance);
         setCanvas(fabricCanvas);
-
-        // Preserve the original saved-canvas availability check.
-        try {
-            const savedCanvas = localStorage.getItem("polyPlotCanvas");
-
-            if (savedCanvas) {
-            const parsedCanvas = JSON.parse(savedCanvas);
-
-            if (
-                Array.isArray(parsedCanvas?.objects) &&
-                parsedCanvas.objects.length > 1
-            ) {
-                setJsonExist(true);
-            }
-            }
-        } catch (error) {
-            console.error("Unable to inspect saved canvas:", error);
-        }
         };
 
         initializeCanvas().catch((error: unknown) => {
@@ -195,19 +166,9 @@ export function CanvasProvider({
         setCanvasConfig,
 
         toolRef,
-        plotterRef,
-
-        canvasObjs,
-        setCanvasObjs,
 
         containerRef,
         workspace,
-
-        jsonExist,
-        setJsonExist,
-
-        plotCanvasState,
-        setPlotCanvasState,
     };
 
     return (

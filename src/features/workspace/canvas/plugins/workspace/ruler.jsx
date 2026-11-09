@@ -1,5 +1,4 @@
 import { Color } from "fabric";
-import throttle from "lodash.throttle";
 
 export default class CanvasRuler {
     constructor(fabricCanvas) {
@@ -219,7 +218,7 @@ export default class CanvasRuler {
         ctx.save();
         const { left, top, width, height, fill, stroke, strokeWidth } = options;
         ctx.beginPath();
-        fill && (ctx.fillStyle = fill);
+        if (fill) ctx.fillStyle = fill;
         ctx.rect(left, top, width, height);
         ctx.fill();
 
@@ -234,7 +233,7 @@ export default class CanvasRuler {
     drawText(ctx, options) {
         ctx.save();
         const { left, top, text, fill, align, angle, fontSize } = options;
-        fill && (ctx.fillStyle = fill);
+        if (fill) ctx.fillStyle = fill;
         ctx.textAlign = align ?? 'left';
         ctx.textBaseline = 'top';
         ctx.font = `${fontSize ?? 10}px sans-serif`;
@@ -251,7 +250,7 @@ export default class CanvasRuler {
         ctx.save();
         const { left, top, width, height, stroke, lineWidth } = options;
         ctx.beginPath();
-        stroke && (ctx.strokeStyle = stroke);
+        if (stroke) ctx.strokeStyle = stroke;
         ctx.lineWidth = lineWidth ?? 1;
         ctx.moveTo(left, top);
         ctx.lineTo(left + width, top + height);

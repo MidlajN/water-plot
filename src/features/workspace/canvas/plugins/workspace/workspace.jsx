@@ -1,4 +1,4 @@
-import { util,  Rect, iMatrix, Point, Canvas, ActiveSelection, Group, Path, Line, loadSVGFromString } from "fabric";
+import { util, Rect, iMatrix, Point, Canvas, ActiveSelection } from "fabric";
 import throttle from "lodash.throttle";
 import { SingleLineText } from "../../../text/SingleLineText";
 import { DEFAULT_FONT_ID, hasSingleLineFont } from "../../../text/fonts";
@@ -34,12 +34,12 @@ export class Workspace {
         this.undoStack = [];
         this.redoStack = [];
         this.isUndoRedo = false;
-        this.listeners = {};
         this.eventHandlers = {
             handleKeydown: this.handleKeydown.bind(this),
             highlightObj: this.hightlightObject.bind(this),
             saveState: this.saveState.bind(this),
             blockWheel: (e) => e.preventDefault(),
+            persist: () => localStorage.setItem('polyPlotCanvas', JSON.stringify(this.canvas.toJSON())),
         }
 
         this.initCanvas();
@@ -60,9 +60,7 @@ export class Workspace {
             targetFindTolerance: 12
         });
 
-        window.addEventListener('beforeunload', () => {
-            localStorage.setItem('polyPlotCanvas', JSON.stringify(this.canvas.toJSON()));
-        });
+        window.addEventListener('beforeunload', this.eventHandlers.persist);
 
         if (window.opener) window.opener.postMessage({ type: 'RECEIVER_READY' }, '*')
     }
@@ -125,37 +123,23 @@ export class Workspace {
     }
 
     undo() {
-        // if (this.undoStack.length <= 1 || this.toolRef.current !== 'Select') return;
         if (this.undoStack.length <= 1) return;
 
-        this.isUndoRedo = true;
-        const currentState = this.undoStack.pop();
-        this.redoStack.push(currentState);
-
-        const prevState = this.undoStack[this.undoStack.length - 1];
-
-        this.canvas.loadFromJSON(prevState).then(() => {
-            this.canvas.getObjects().forEach(obj => {
-                if (obj.name === 'workspace') {
-                    obj.selectable = false;
-                    obj.hasControls = false;
-                    obj.setCoords();
-                    this.workspace = obj;
-                }
-            });
-            this.isUndoRedo = false;
-            this.canvas.renderAll()
-        })
+        this.redoStack.push(this.undoStack.pop());
+        this.restoreState(this.undoStack[this.undoStack.length - 1]);
     }
 
     redo() {
-        // if (this.redoStack.length === 0 || this.toolRef.current !== 'Select') return;
         if (this.redoStack.length === 0) return;
 
-        this.isUndoRedo = true;
         const state = this.redoStack.pop();
         this.undoStack.push(state);
+        this.restoreState(state);
+    }
 
+    /** Loads a history snapshot without recording it as a new change. */
+    restoreState(state) {
+        this.isUndoRedo = true;
         this.canvas.loadFromJSON(state).then(() => {
             this.canvas.getObjects().forEach(obj => {
                 if (obj.name === 'workspace') {
@@ -167,62 +151,51 @@ export class Workspace {
             });
             this.isUndoRedo = false;
             this.canvas.renderAll();
-        })
+        });
     }
 
-    loadFromFiles(file, color) {
-        if (file && file.type !== 'image/svg+xml') return;
-
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const svg = e.target.result;
-
-            const loadedSvg = await loadSVGFromString(svg);
-            loadedSvg.objects.forEach(obj => {
-                obj.set({
-                    stroke: color,
-                    strokeWidth: 2,
-                    fill: 'transparent'
-                });
-            });
-
-            const svgObj = util.groupSVGElements(loadedSvg.objects, loadedSvg.options);
-            this.canvas.add(svgObj);
-            this.canvas.renderAll();
-        }
-        reader.readAsText(file);
-    }
-
+    /**
+     * Restores the drawing saved when the page was last closed or reloaded. The restored
+     * drawing becomes the start of the undo history. A missing or unreadable save leaves
+     * the blank page in place.
+     */
     async loadFromJSON() {
-        const savedCanvas = localStorage.getItem('polyPlotCanvas');
-        if (!savedCanvas) return;
-
+        let saved;
         try {
-            const parsedCanvas = JSON.parse(savedCanvas);
-            parsedCanvas.objects = parsedCanvas.objects.map(toSingleLineTextJSON);
-
-            await this.canvas.loadFromJSON(parsedCanvas).then(() => {
-                this.canvas.getObjects().forEach((obj) => {
-                    if (obj.name === 'workspace') {
-                        this.workspace = obj;
-                        const orientation = obj.width > obj.height ? 'horizontal' : 'vertical';
-                        this.setConfig(prev => ({
-                            ...prev,
-                            orientation: orientation,
-                            width: parseFloat(obj.width * 25.4 / 96).toFixed(1),
-                            height: parseFloat(obj.height * 25.4 / 96).toFixed(1)
-                        }));
-                        obj.set('selectable', false);
-                        obj.set('hasControls', false);
-                    }
-
-                    obj.setCoords();
-                })
-                this.setZoomAuto();
-            })
+            saved = JSON.parse(localStorage.getItem('polyPlotCanvas') ?? 'null');
         } catch (err) {
-            console.log('Error Occured in the workspace loadFromJSON : ', err)
+            console.warn('Ignoring unreadable saved canvas:', err);
+            return;
         }
+        if (!Array.isArray(saved?.objects) || !saved.objects.some((obj) => obj.name === 'workspace')) return;
+
+        saved.objects = saved.objects.map(toSingleLineTextJSON);
+
+        this.isUndoRedo = true;
+        try {
+            await this.canvas.loadFromJSON(saved);
+        } catch (err) {
+            console.warn('Could not restore saved canvas:', err);
+        }
+
+        this.canvas.getObjects().forEach((obj) => {
+            if (obj.name === 'workspace') {
+                this.workspace = obj;
+                obj.set({ selectable: false, hasControls: false });
+                this.setConfig((prev) => ({
+                    ...prev,
+                    orientation: obj.width > obj.height ? 'horizontal' : 'vertical',
+                    width: Number((obj.width * 25.4 / 96).toFixed(1)),
+                    height: Number((obj.height * 25.4 / 96).toFixed(1)),
+                }));
+            }
+            obj.setCoords();
+        });
+
+        this.isUndoRedo = false;
+        this.undoStack = [JSON.stringify(this.canvas)];
+        this.redoStack = [];
+        this.setZoomAuto();
     }
 
     hightlightObject() {
@@ -289,14 +262,6 @@ export class Workspace {
             case isCtrl && key === 'a':
                 e.preventDefault();
                 this.handleSelectAll();
-                break;
-            case isCtrl && key === 'g' && e.shiftKey:
-                e.preventDefault();
-                this.handleSplit();
-                break;
-            case isCtrl && key === 'g':
-                e.preventDefault();
-                this.handleGroup();
                 break;
             case isCtrl && key === 'z':
                 this.undo();
@@ -380,196 +345,6 @@ export class Workspace {
         this.canvas.renderAll()
     }
 
-    handleGroup() {
-        const activeObject = this.canvas.getActiveObject();
-        if (!activeObject || activeObject.get('type') !== 'activeselection') return;
-
-        const objects = activeObject.getObjects();
-        const firstStroke =objects[0].stroke;
-        const allSameStroke = objects.every(obj => obj.stroke === firstStroke);
-        this.canvas.off('object:removed', this.eventHandlers.saveState)
-        objects.forEach(obj => this.canvas.remove(obj));
-        this.canvas.discardActiveObject()
-
-        const group = new Group(objects, { subTargetCheck: true, stroke: allSameStroke ? firstStroke : '' });
-        this.canvas.add(group);
-        this.canvas.setActiveObject(group)
-        this.canvas.on('object:removed', this.eventHandlers.saveState);
-        this.canvas.renderAll();
-    }
-
-    handleSplit() {
-        const activeObject = this.canvas.getActiveObject();
-        if (!activeObject || activeObject.get('type') === 'activeselection' || activeObject.isFreeDraw) return;
-
-        if (activeObject.get('type') === 'group') {
-            this.canvas.add(...activeObject.removeAll());
-            this.canvas.remove(activeObject);
-        } else {
-            const type = activeObject.get('type');
-            const strokeColor = activeObject.stroke;
-            let fabricPaths = [];
-
-            const createPath = (path) => {
-                const fabricPath = new Path(path, {
-                    selectable: true,
-                    hasControls: true,
-                    fill: 'transparent',
-                    stroke: strokeColor,
-                    strokeWidth: 2
-                })
-                fabricPaths.push(fabricPath);
-            }
-
-            const createLine = (x,y, x1, y1) => {
-                const line = new Line([ x,y, x1, y1 ], {
-                    selectable: true,
-                    hasControls: true,
-                    fill: 'transparent',
-                    stroke: strokeColor,
-                    strokeWidth: 2,
-                });
-                fabricPaths.push(line)
-            }
-
-            switch (type) {
-                case 'path': {
-                    const paths = activeObject.path;
-                    fabricPaths = [];
-
-                    const multipleMFound = () => {
-                        let firstMFound = false;
-                        for (let path of paths) {
-                            if (path[0] === 'M' && path.length === 3) {
-                                if (firstMFound) return true;
-                                else firstMFound = true
-                            }
-                        }
-                        return false;
-                    }
-
-                    if (multipleMFound()) {
-                        const mainArray = [];
-                        let subArray = [];
-
-                        for (let i = 0; i < paths.length; i++) {
-                            const pathLine = paths[i] ? paths[i].join(' ') : null;
-                            const command = paths[i] ? paths[i][0] : null;
-
-                            if (command === 'M' || i === paths.length) {
-                                if (subArray.length) mainArray.push(subArray.join(' '));
-                                subArray = [];
-                            }
-                            subArray.push(pathLine);
-                        }
-                        for (let i = 0; i < mainArray.length; i++) {
-                            if (mainArray[i] !== null) createPath(mainArray[i])
-                        }
-                    } else {
-                        // Single M, Each Path need to have an M command and its command
-                        let lastX = 0;
-                        let lastY = 0;
-                        let mainMX = 0;
-                        let mainMY = 0;
-
-                        for (let i = 0; i < paths.length; i++) {
-                            const command = paths[i][0];
-                            let newLine = null;
-
-                            if (command === 'M') {
-                                lastX = paths[i][1];
-                                lastY = paths[i][2];
-                                mainMX = paths[i][1];
-                                mainMY = paths[i][2];
-                            } else if (command === 'Z') {
-                                if (mainMX === lastX && mainMY === lastY) continue;
-                                newLine = `M ${lastX} ${lastY} L ${mainMX} ${mainMY}`;
-                            } else {
-                                newLine = `M ${lastX} ${lastY} ${paths[i].join(' ')}`;
-                                lastX = paths[i][paths[i].length - 2];
-                                lastY = paths[i][paths[i].length - 1];
-                            }
-
-                            if (newLine) createPath(newLine);
-                        }
-
-                    }
-                    break;
-                }
-                    
-                case 'rect': {
-                    fabricPaths = [];
-                    const topLeft = { x: activeObject.left, y: activeObject.top };
-                    const topRight = { x: activeObject.left + activeObject.width, y: activeObject.top };
-                    const bottomLeft = { x: activeObject.left, y: activeObject.top + activeObject.height };
-                    const bottomRight = { x: activeObject.left + activeObject.width, y: activeObject.top + activeObject.height }; 
-
-                    createLine(topLeft.x, topLeft.y, topRight.x, topRight.y);
-                    createLine(topRight.x, topRight.y, bottomRight.x, bottomRight.y);
-                    createLine(bottomRight.x, bottomRight.y,  bottomLeft.x, bottomLeft.y);
-                    createLine(bottomLeft.x, bottomLeft.y, topLeft.x, topLeft.y);
-                    break;
-                }
-
-                case 'polygon': {
-                    fabricPaths = []
-                    const points = activeObject.points;
-
-                    for (let i=0; i < points.length; i++) {
-                        const start = points[i];
-                        const end = points[(i + 1) % points.length];
-                        createLine(start.x, start.y, end.x, end.y)
-                    }
-                    break;
-                }
-
-                case 'triangle': {
-                    fabricPaths = [];
-                    let left = activeObject.left;
-                    let top = activeObject.top;
-                    let width = activeObject.width;
-                    let height = activeObject.height;
-
-                    let topX = left + width / 2;
-                    let topY = top;
-
-                    let bottomLeftX = left;
-                    let bottomLeftY = top + height;
-
-                    let bottomRightX = left + width;
-                    let bottomRightY = top + height;
-
-                    createLine(topX, topY, bottomLeftX, bottomLeftY);
-                    createLine(bottomLeftX, bottomLeftY, bottomRightX, bottomRightY);
-                    createLine(bottomRightX, bottomRightY, topX, topY);
-                    break;
-                }
-  
-                default:
-                    break;
-            }
-
-            if (fabricPaths.length === 0) return;
-
-            this.canvas.off('object:added', this.eventHandlers.saveState);
-            const group = new Group(fabricPaths);
-            group.set({
-                left: activeObject.left,
-                top: activeObject.top,
-                scaleX: activeObject.scaleX,
-                scaleY: activeObject.scaleY,
-                angle: activeObject.angle,
-            });
-            group.setCoords();
-
-            const objects = [...group.removeAll()];
-            this.canvas.add(...objects);
-            this.canvas.remove(activeObject);
-            this.canvas.on('object:added', this.eventHandlers.saveState);
-        }
-        this.canvas.renderAll()
-    }
-
     setZoomAuto() {
         const elWidth = this.container.offsetWidth;
         const elHeight = this.container.offsetHeight;
@@ -601,6 +376,7 @@ export class Workspace {
         window.removeEventListener('keydown', this.eventHandlers.handleKeydown);
         this.container?.removeEventListener('wheel', this.eventHandlers.blockWheel);
 
+        this.canvas.off('object:modified', this.eventHandlers.highlightObj);
         this.canvas.off('object:moving', this.eventHandlers.highlightObj);
         this.canvas.off('object:scaling', this.eventHandlers.highlightObj);
         this.canvas.off('object:rotating', this.eventHandlers.highlightObj);
@@ -611,7 +387,7 @@ export class Workspace {
         this.canvas.off('object:modified', this.eventHandlers.saveState);
         this.canvas.off('object:removed', this.eventHandlers.saveState);
 
-        window.removeEventListener('beforeunload', () => localStorage.setItem('polyPlotCanvas', JSON.stringify(this.canvas.toJSON())))
+        window.removeEventListener('beforeunload', this.eventHandlers.persist);
 
         this.canvas.dispose()
     }
@@ -623,25 +399,4 @@ export class Workspace {
     getWorkspace() {
         return this.workspace;
     }
-
-    // Event Listener
-    on(event, callback) {
-        if (!this.listeners[event]) {
-            this.listeners[event] = []
-        }
-        this.listeners[event].push(callback);
-    }
-
-    off(event, callback) {
-        if (this.listeners[event]) {
-            this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
-        }
-    }
-
-    emit (event, data) {
-        if (this.listeners[event]) {
-            this.listeners[event].forEach(callback => callback(data))
-        }
-    }
-
 }

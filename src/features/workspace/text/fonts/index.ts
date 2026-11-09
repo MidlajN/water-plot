@@ -20,6 +20,12 @@ export interface SingleLineFont {
     advance: number;
     /** Character -> [advance width, path data]. Blank glyphs have no path. */
     glyphs: Record<string, [number, string?]>;
+    /**
+     * Joined (script) font: each letter's first subpath runs from the point where the
+     * previous letter ends to the point where the next one starts, so a word can be
+     * drawn in one pen-down. Later subpaths are separate marks (i dots, t bars).
+     */
+    joined?: boolean;
 }
 
 /** Bundled fonts in picker order, with the short label shown in the UI. */

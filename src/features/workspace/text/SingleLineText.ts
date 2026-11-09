@@ -1,7 +1,7 @@
 import { IText, Path, classRegistry, util, type ITextProps } from "fabric";
 
 import { DEFAULT_FONT_ID, SINGLE_LINE_TEXT_TYPE, getSingleLineFont } from "./fonts";
-import { appendGlyphPath, glyphAdvance } from "./singleLinePath";
+import { GlyphPathWriter, glyphAdvance } from "./singleLinePath";
 
 type SVGReviver = (markup: string) => string;
 
@@ -70,7 +70,7 @@ export class SingleLineText extends IText {
 
         const font = getSingleLineFont(this.fontFamily);
         const left = this._getLeftOffset();
-        const out: string[] = [];
+        const writer = new GlyphPathWriter(font, this.fontSize);
         let lineTop = this._getTopOffset();
 
         this._textLines.forEach((line, lineIndex) => {
@@ -81,13 +81,14 @@ export class SingleLineText extends IText {
 
             line.forEach((char, charIndex) => {
                 const x = lineLeft + this.__charBounds[lineIndex][charIndex].left;
-                appendGlyphPath(out, font, char, x, baseline, this.fontSize);
+                writer.add(char, x, baseline);
             });
+            writer.endWord();
 
             lineTop += lineHeight;
         });
 
-        this.pathDataCache = out.join(" ");
+        this.pathDataCache = writer.finish();
         return this.pathDataCache;
     }
 

@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 // context/canvas/plugins/setFabricDefaults.js
 import { Control, controlsUtils, FabricObject, util } from "fabric";
 import { getIcon, preloadIcon } from "./iconCache";

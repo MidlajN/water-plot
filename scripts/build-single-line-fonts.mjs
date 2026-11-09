@@ -20,6 +20,7 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { routeGlyph } from "./route-strokes.mjs";
 
 const OUT_DIR = resolve(import.meta.dirname, "../src/features/workspace/text/fonts/data");
 const DEFAULT_FONTS = ["HersheySans1", "HersheySansMed", "HersheySerifMed", "HersheyScript1"];
@@ -55,6 +56,17 @@ const GLYPH_OVERRIDES = {
     /** Height the shear pivots around, so the glyph stays centred in its advance. */
     pivotY: 331,
   },
+};
+
+/**
+ * Joined (script) fonts: letters meet at `entry` and `exit` (x is added to the advance).
+ * Their strokes are re-routed so each letter is one pen-down from entry to exit and a
+ * word plots as a single run (see route-strokes.mjs). `attachSnap` is how far the entry
+ * or exit may sit from a stroke and still be joined to it (with a short connector);
+ * `stretchExit` lets a letter that stops short of the exit (most capitals) reach it.
+ */
+const ROUTED_FONTS = {
+  HersheyScript1: { entry: [31.5, 158], exit: [31.5, 158], attachSnap: 12, stretchExit: 180 },
 };
 
 const args = process.argv.slice(2);
@@ -240,8 +252,31 @@ function smoothOpen(points, isBreak, hasZ) {
  * Conversion
  * ---------------------------------------------------------------------- */
 
-/** `transform` maps each [x, y] in font units, e.g. to slant an override glyph. */
-function convertPath(d, transform) {
+/** Polyline subpaths -> one routed run per group of touching strokes. */
+function routeSubpaths(subpaths, advance, route) {
+  const polylines = subpaths.map((commands) => {
+    const points = commands.filter(([op]) => op !== "Z").map(([, ...coords]) => coords);
+    if (commands.at(-1)[0] === "Z") points.push([...points[0]]);
+    return points;
+  });
+  const { strokes, joinsEntry, joinsExit, stretched } = routeGlyph(polylines, {
+    entry: route.entry,
+    exit: route.entry ? [advance + route.exit[0], route.exit[1]] : null,
+    attachSnap: route.attachSnap,
+    stretchExit: route.stretchExit,
+  });
+  return {
+    subpaths: strokes.map((points) => points.map(([x, y], i) => [i ? "L" : "M", x, y])),
+    joins: { entry: joinsEntry, exit: joinsExit, stretched },
+  };
+}
+
+/**
+ * `transform` maps each [x, y] in font units, e.g. to slant an override glyph.
+ * `route` (with the glyph advance) re-routes the strokes for a joined font.
+ * Returns the path data and, for routed glyphs, which joins it reaches.
+ */
+function convertPath(d, { transform, route, advance } = {}) {
   let subpaths = parsePath(d);
   if (transform) {
     subpaths = subpaths.map((commands) =>
@@ -252,7 +287,11 @@ function convertPath(d, transform) {
       }),
     );
   }
-  return serialize(smooth ? subpaths.map(smoothSubpath) : subpaths);
+  // Hand-drawn curves (rare) are left as drawn.
+  const polylineOnly = subpaths.every((commands) => commands.every(([op]) => op !== "C"));
+  let joins = null;
+  if (route && polylineOnly) ({ subpaths, joins } = routeSubpaths(subpaths, advance, route));
+  return { d: serialize(smooth ? subpaths.map(smoothSubpath) : subpaths), joins };
 }
 
 /** Single-character glyphs of an SVG font: char -> { advance, d }. */
@@ -281,8 +320,24 @@ function convert(fontId) {
   const slant = override && ((x, y) => [x + override.shear * (y - override.pivotY), y]);
 
   const glyphs = {};
+  const joined = [];
+  const stretched = [];
   for (const [char, { advance, d, slanted }] of source) {
-    glyphs[char] = d ? [advance, convertPath(d, slanted ? slant : undefined)] : [advance];
+    if (!d) {
+      glyphs[char] = [advance];
+      continue;
+    }
+    // Only letters join their neighbours; other glyphs are routed but keep their own ends.
+    const routing = ROUTED_FONTS[fontId];
+    const route = routing && (/\p{L}/u.test(char) ? routing : { entry: null, exit: [0, 0], stretchExit: 0 });
+    const result = convertPath(d, { transform: slanted ? slant : undefined, route, advance });
+    glyphs[char] = [advance, result.d];
+    if (result.joins?.entry && result.joins?.exit) joined.push(char);
+    if (result.joins?.stretched) stretched.push(char);
+  }
+  if (ROUTED_FONTS[fontId]) {
+    console.log(`  joined both sides: ${joined.join("")}`);
+    console.log(`  exit stretched: ${stretched.join("")}`);
   }
 
   const data = {
@@ -293,6 +348,7 @@ function convert(fontId) {
     descent: Number(face.descent),
     advance: Number(font["horiz-adv-x"]),
     glyphs,
+    ...(ROUTED_FONTS[fontId] && { joined: true }),
   };
 
   writeFileSync(join(OUT_DIR, `${fontId}.json`), JSON.stringify(data));

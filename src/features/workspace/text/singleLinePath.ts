@@ -42,40 +42,67 @@ export function glyphAdvance(font: SingleLineFont, char: string, fontSize: numbe
 
 /** Path data for a single line of text with its baseline at y = ascent, e.g. for previews. */
 export function textToPathData(font: SingleLineFont, text: string, fontSize: number) {
-    const out: string[] = [];
+    const writer = new GlyphPathWriter(font, fontSize);
     const baseline = (font.ascent * fontSize) / font.unitsPerEm;
     let x = 0;
 
     for (const char of text) {
-        appendGlyphPath(out, font, char, x, baseline, fontSize);
+        writer.add(char, x, baseline);
         x += glyphAdvance(font, char, fontSize);
     }
 
     return {
-        d: out.join(" "),
+        d: writer.finish(),
         width: x,
         height: ((font.ascent - font.descent) * fontSize) / font.unitsPerEm,
     };
 }
 
 /**
- * Appends the SVG path data for one character, with its origin at (x, baseline)
+ * Builds SVG path data glyph by glyph, with each glyph's origin at (x, baseline)
  * in canvas coordinates (y pointing down).
+ *
+ * For joined fonts the order is chosen for plotting: each word's letters are written
+ * as one continuous run, and their separate marks (i dots, t bars...) follow at the end
+ * of the word, so a plotter that keeps document order lowers the pen once per word plus
+ * once per mark, like a hand writing the word and then dotting it.
  */
-export function appendGlyphPath(
-    out: string[],
-    font: SingleLineFont,
-    char: string,
-    x: number,
-    baseline: number,
-    fontSize: number,
-) {
-    const scale = fontSize / font.unitsPerEm;
+export class GlyphPathWriter {
+    private readonly out: string[] = [];
+    private marks: string[] = [];
 
-    for (const [op, ...coords] of parseGlyph(font, char)) {
-        out.push(op);
-        for (let i = 0; i < coords.length; i += 2) {
-            out.push(String(round(x + coords[i] * scale)), String(round(baseline - coords[i + 1] * scale)));
+    constructor(
+        private readonly font: SingleLineFont,
+        private readonly fontSize: number,
+    ) {}
+
+    add(char: string, x: number, baseline: number) {
+        if (/\s/.test(char)) {
+            this.endWord();
+            return;
         }
+
+        const scale = this.fontSize / this.font.unitsPerEm;
+        let target = this.out;
+        let subpath = 0;
+
+        for (const [op, ...coords] of parseGlyph(this.font, char)) {
+            if (op === "M" && subpath++ === 1 && this.font.joined) target = this.marks;
+            target.push(op);
+            for (let i = 0; i < coords.length; i += 2) {
+                target.push(String(round(x + coords[i] * scale)), String(round(baseline - coords[i + 1] * scale)));
+            }
+        }
+    }
+
+    /** Flushes the current word's marks; call at the end of each line. */
+    endWord() {
+        this.out.push(...this.marks);
+        this.marks = [];
+    }
+
+    finish(): string {
+        this.endWord();
+        return this.out.join(" ");
     }
 }

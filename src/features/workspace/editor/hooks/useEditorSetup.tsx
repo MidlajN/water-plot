@@ -18,7 +18,6 @@ type WorkspaceHistory = {
 };
 
 const DEFAULT_STROKE = "#111111";
-const DEFAULT_FONT_SIZE = 40;
 const PROTECTED_OBJECT_NAMES = ["workspace", "BedSize", "ToolHead"];
 
 const isLeftClickOrTouch = (event: PointerInfo) =>
@@ -26,17 +25,21 @@ const isLeftClickOrTouch = (event: PointerInfo) =>
 
 export function useEditorSetup() {
     const canvasContext = useCanvas();
-    const { tool, element, fontFamily, setTool } = useEditor();
+    const { tool, element, fontFamily, fontSize, setTool } = useEditor();
 
     const canvas = canvasContext?.canvas ?? null;
     const workspace = canvasContext?.workspace ?? null;
     const toolRef = canvasContext?.toolRef;
 
-    // Read through a ref so changing font mid-edit does not restart the tool and end editing.
+    // Read through refs so changing font or size mid-edit does not restart the tool and end editing.
     const fontFamilyRef = useRef(fontFamily);
     useEffect(() => {
         fontFamilyRef.current = fontFamily;
     }, [fontFamily]);
+    const fontSizeRef = useRef(fontSize);
+    useEffect(() => {
+        fontSizeRef.current = fontSize;
+    }, [fontSize]);
 
     // Keep the Fabric tool behavior synchronized with editor state.
     useEffect(() => {
@@ -321,7 +324,7 @@ export function useEditorSetup() {
                         left: pointer.x,
                         top: pointer.y,
                         fontFamily: fontFamilyRef.current,
-                        fontSize: DEFAULT_FONT_SIZE,
+                        fontSize: fontSizeRef.current,
                         stroke: DEFAULT_STROKE,
                     });
 

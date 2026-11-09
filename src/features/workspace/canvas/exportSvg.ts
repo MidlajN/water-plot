@@ -12,7 +12,7 @@ export function exportCanvasToSvg( canvas: FabricCanvas, workspace: WorkspaceIns
     const ws = workspace.getWorkspace();
 
     const objects = canvas.getObjects().filter((obj) => {
-        if (obj.name === "workspace") return false;
+        if ((obj as typeof obj & { name?: string }).name === "workspace") return false;
 
         const fullyContained = obj
             .getCoords()
