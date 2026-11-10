@@ -97,6 +97,8 @@ Settings live in `.env`. The worker reads only `.env`; Next.js reads `.env` and
 | `PLOTTER_QUADRANT` | svg-to-gcode default | Which quadrant of the machine's coordinate system drawings are placed in (1–4). |
 | `PLOTTER_X_OFFSET` | `0` | Shifts drawings along X, in mm. |
 | `PLOTTER_Y_OFFSET` | `0` | Shifts drawings along Y, in mm. |
+| `PLOTTER_PARK_X`, `PLOTTER_PARK_Y` | `0`, `0` | Where the pen goes after every plot, in mm, in the same coordinates as the drawing. The pen lifts to travel height first. |
+| `PLOTTER_PARK` | on | `false` leaves the pen over the last stroke instead of parking. |
 | `GROQ_API_KEY` | none | Groq API key (`gsk_…`) for AI Creative Studio. Server-side only. |
 | `GROQ_BASE_URL` | none | Groq's OpenAI-compatible endpoint, `https://api.groq.com/openai/v1`. |
 | `GROQ_MODEL` | none | Model for designs. It needs strict structured output, and Groq's built-in `browser_search` tool if web search is on. `openai/gpt-oss-120b` (or `openai/gpt-oss-20b`) supports both. |

@@ -50,6 +50,39 @@ export function plotterConverterSettings(): ConverterSettings {
     return settings;
 }
 
+export interface ParkPosition {
+    x: number;
+    y: number;
+}
+
+/**
+ * Where the pen goes after every plot, with the pen up: PLOTTER_PARK_X / PLOTTER_PARK_Y
+ * in mm (default 0, 0, in the same coordinates as the drawing). PLOTTER_PARK=false turns
+ * parking off, leaving the pen over the last stroke.
+ */
+export function plotterParkPosition(): ParkPosition | null {
+    if (/^(false|off|no|0)$/i.test(process.env.PLOTTER_PARK?.trim() ?? "")) return null;
+    return { x: envNumber("PLOTTER_PARK_X") ?? 0, y: envNumber("PLOTTER_PARK_Y") ?? 0 };
+}
+
+const PROGRAM_END = /^M0*(2|30)\b/i;
+
+/**
+ * Ends safe G-code with a park move: pen up to the travel height, then a rapid move to
+ * the park position. Goes before a trailing M2/M30, which ends the program.
+ */
+export function appendPark(gcode: string, park: ParkPosition | null, zTravel: number, zFeedMax: number): string {
+    if (!park) return gcode;
+    const lines = gcode.split("\n").filter((line) => line.trim());
+    let end = lines.length;
+    while (end > 0 && PROGRAM_END.test(lines[end - 1])) end--;
+    const penUp = `G1 Z${format(zTravel)} F${format(zFeedMax)}`;
+    const move = `G0 X${format(park.x)} Y${format(park.y)}`;
+    // Skip the pen-up when the program already ends with it.
+    lines.splice(end, 0, ...(lines[end - 1] === penUp ? [move] : [penUp, move]));
+    return lines.join("\n") + "\n";
+}
+
 export interface PenSafetyOptions {
     /** Z values are clamped into [zMin, zMax]. */
     zMin: number;

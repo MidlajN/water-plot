@@ -1,6 +1,6 @@
 import { Converter, type ConverterSettings } from "svg-to-gcode";
 
-import { PLOTTER_PROFILE, applyPenSafety, plotterConverterSettings } from "../plotter/profile";
+import { PLOTTER_PROFILE, appendPark, applyPenSafety, plotterConverterSettings, plotterParkPosition } from "../plotter/profile";
 
 export interface GcodeResult {
     gcode: string;
@@ -18,6 +18,7 @@ function safetyFor(settings: ConverterSettings) {
     const zTravel = zDraw < 0 ? zDraw + zOffset : zDraw - zOffset;
 
     return {
+        zTravel,
         zMin: Math.min(zDraw, zTravel),
         zMax: Math.max(zDraw, zTravel),
         zFeedMax: PLOTTER_PROFILE.zFeedMax,
@@ -29,20 +30,27 @@ export function countLines(gcode: string) {
     return gcode.split("\n").filter((line) => line.trim()).length;
 }
 
+/** Pen safety, then the park move at the end (pen up first). */
+function finish(gcode: string, settings: ConverterSettings) {
+    const safety = safetyFor(settings);
+    return appendPark(applyPenSafety(gcode, safety), plotterParkPosition(), safety.zTravel, safety.zFeedMax);
+}
+
 /**
  * Converts an SVG (user units read as 96 dpi px) to plotter-safe G-code using the
- * plotter profile, with optional setting overrides.
+ * plotter profile, with optional setting overrides. The program ends with the pen
+ * parked (see plotterParkPosition).
  */
 export async function convertSvgToGcode(svg: string, overrides: ConverterSettings = {}): Promise<GcodeResult> {
     const settings = { ...plotterConverterSettings(), ...overrides };
     const result = await new Converter(settings).convert(svg);
-    const gcode = applyPenSafety(result.gcode, safetyFor(settings));
+    const gcode = finish(result.gcode, settings);
 
     return { gcode, time: result.time, lines: countLines(gcode) };
 }
 
-/** Makes G-code from elsewhere (an uploaded file) plotter-safe with the profile's limits. */
+/** Makes G-code from elsewhere (an uploaded file) plotter-safe with the profile's limits, and parks at the end. */
 export function makeGcodeSafe(gcode: string) {
-    const safe = applyPenSafety(gcode, safetyFor(plotterConverterSettings()));
+    const safe = finish(gcode, plotterConverterSettings());
     return { gcode: safe, lines: countLines(safe) };
 }
