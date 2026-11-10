@@ -15,6 +15,132 @@
   --color-ok: #2f8f62;
   --color-caution: #b7791f;
   --color-fault: #c0392b;
+
+  /* Apple-style surfaces (Auto mode first; other screens move over as they are redesigned). */
+  --color-grouped: #f2f2f7;
+  --color-panel: #f7f7f9;
+  --color-separator: rgb(60 60 67 / 0.14);
+  --font-system: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+
+/*
+ * Type ramp. Tracking is size-specific: tighter as text grows, slightly open when small.
+ * Sizes are in rem so the layout follows the reader's text size.
+ */
+@utility type-large-title {
+  font-size: 2.125rem;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+}
+@utility type-title {
+  font-size: 1.75rem;
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+@utility type-headline {
+  font-size: 1.0625rem;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+@utility type-body {
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+@utility type-footnote {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  letter-spacing: 0.005em;
+}
+@utility type-caption {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  letter-spacing: 0.012em;
+}
+
+/*
+ * Translucent chrome that content scrolls under. Goes solid when the reader asks for
+ * less transparency, and gets a firm edge when they ask for more contrast.
+ */
+@utility material-bar {
+  background-color: rgb(249 249 251 / 0.72);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: rgb(249 249 251);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  @media (prefers-contrast: more) {
+    background-color: rgb(255 255 255);
+    box-shadow: 0 1px 0 var(--color-ink);
+  }
+}
+
+/* Thicker material for floating controls: stronger blur, deeper shadow, lit top edge. */
+@utility material-float {
+  background-color: rgb(255 255 255 / 0.7);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  backdrop-filter: blur(28px) saturate(190%);
+  box-shadow:
+    inset 0 0.5px 0 rgb(255 255 255 / 0.9),
+    0 0 0 0.5px rgb(0 0 0 / 0.06),
+    0 8px 28px rgb(31 39 51 / 0.14);
+
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: rgb(255 255 255);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  @media (prefers-contrast: more) {
+    background-color: rgb(255 255 255);
+    box-shadow: 0 0 0 1px var(--color-ink);
+  }
+}
+
+/* A white control sitting on a grey surface: hairline edge and a soft lift. */
+@utility surface-raised {
+  background-color: #fff;
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.07),
+    0 1px 2px rgb(31 39 51 / 0.07);
+
+  @media (prefers-contrast: more) {
+    box-shadow: 0 0 0 1px var(--color-ink);
+  }
+}
+
+/* Instant feedback on press (pointer-down), released quickly. */
+@utility press {
+  transition-property: transform, background-color, color, box-shadow, opacity;
+  transition-duration: 140ms;
+  transition-timing-function: ease-out;
+  -webkit-tap-highlight-color: transparent;
+
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Fills once a minute; started with a negative delay so it matches the wall clock. */
+@keyframes minute-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
 }
 
 @theme inline {

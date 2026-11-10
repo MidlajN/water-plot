@@ -285,9 +285,7 @@ export function Joystick() {
                     {GRID.map((sector) => (
                         <div
                             key={sector}
-                            className={`border border-dashed border-[#1c8096]/40 transition-colors ${
-                                sector === pointed ? "bg-[#1c8096]/25" : ""
-                            }`}
+                            className={`border border-dashed border-teal/40 transition-colors ${sector === pointed ? "bg-teal/20" : ""}`}
                         />
                     ))}
                 </div>
@@ -299,21 +297,21 @@ export function Joystick() {
                         <motion.div
                             role="dialog"
                             aria-label="Move to sector"
-                            className="w-36 rounded-2xl bg-white p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.18)]"
+                            className="material-float w-36 origin-right rounded-2xl p-1.5"
                             initial={{ opacity: 0, x: 8, scale: 0.95 }}
                             animate={{ opacity: 1, x: 0, scale: 1 }}
                             exit={{ opacity: 0, x: 8, scale: 0.95 }}
                             transition={{ duration: 0.15 }}
                         >
                             <div className="flex items-center justify-between gap-1 pb-1 pl-1">
-                                <p className="truncate text-[11px] font-medium text-gray-500">
+                                <p className="type-caption truncate font-semibold text-graphite">
                                     {pointed ? SECTOR_LABELS[pointed] : "Pick a sector"}
                                 </p>
                                 <button
                                     type="button"
                                     aria-label="Cancel"
                                     onClick={() => setPickerOpen(false)}
-                                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-sm leading-none text-gray-400 active:bg-gray-100"
+                                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-base leading-none text-graphite active:bg-black/[0.06]"
                                 >
                                     ×
                                 </button>
@@ -325,9 +323,7 @@ export function Joystick() {
                                         type="button"
                                         aria-label={`Move to ${SECTOR_LABELS[sector].toLowerCase()}`}
                                         onClick={() => choose(sector)}
-                                        className={`h-6 rounded-md transition-colors ${
-                                            sector === pointed ? "bg-[#1c8096]" : "bg-gray-100 active:bg-gray-200"
-                                        }`}
+                                        className={`h-6 rounded-md transition-colors ${sector === pointed ? "bg-teal" : "bg-black/[0.06] active:bg-black/[0.1]"}`}
                                     />
                                 ))}
                             </div>
@@ -343,20 +339,20 @@ export function Joystick() {
                     onPointerMove={onPointerMove}
                     onPointerUp={onPointerUp}
                     onPointerCancel={onPointerUp}
-                    className={`relative flex h-24 w-24 touch-none select-none items-center justify-center rounded-full border shadow-lg backdrop-blur transition-opacity ${
-                        pickerOpen ? "border-[#1c8096] bg-white/90" : "border-white/70 bg-white/70"
-                    } ${hasSelection ? "opacity-100" : "opacity-40"}`}
+                    className={`material-float relative flex h-24 w-24 touch-none select-none items-center justify-center rounded-full transition-opacity ${
+                        pickerOpen ? "ring-2 ring-teal" : ""
+                    } ${hasSelection ? "opacity-100" : "opacity-45"}`}
                 >
                     {/* Direction ticks */}
                     {["top-1.5 left-1/2 -translate-x-1/2", "bottom-1.5 left-1/2 -translate-x-1/2", "left-1.5 top-1/2 -translate-y-1/2", "right-1.5 top-1/2 -translate-y-1/2"].map(
                         (position) => (
-                            <span key={position} aria-hidden className={`absolute h-1.5 w-1.5 rounded-full bg-gray-300 ${position}`} />
+                            <span key={position} aria-hidden className={`absolute h-1.5 w-1.5 rounded-full bg-black/15 ${position}`} />
                         ),
                     )}
                     <div
                         ref={knobRef}
                         aria-hidden
-                        className={`h-11 w-11 rounded-full shadow-md transition-[background-color] ${pickerOpen ? "bg-[#1c8096]" : "bg-gray-700"}`}
+                        className={`h-11 w-11 rounded-full shadow-[0_2px_8px_rgb(0_0_0/0.25)] transition-[background-color] ${pickerOpen ? "bg-teal" : "bg-ink"}`}
                     />
                 </div>
             </div>

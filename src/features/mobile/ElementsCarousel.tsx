@@ -19,7 +19,7 @@ type Tab = "shapes" | IllustrationCategory;
 const TABS: { id: Tab; label: string }[] = [{ id: "shapes", label: "Shapes" }, ...ILLUSTRATION_CATEGORIES];
 
 const card =
-    "flex h-16 w-16 shrink-0 snap-start items-center justify-center rounded-2xl border border-gray-100 bg-gray-50 transition-colors active:bg-gray-200 disabled:opacity-50";
+    "press flex h-16 w-16 shrink-0 snap-start items-center justify-center rounded-2xl bg-grouped outline-none active:bg-black/[0.08] focus-visible:ring-2 focus-visible:ring-teal disabled:opacity-50";
 
 /**
  * Mobile Elements picker: category chips over a sideways-scrolling strip of shapes or
@@ -45,7 +45,7 @@ export function ElementsCarousel() {
 
     return (
         <section aria-label="Elements" className="space-y-2">
-            <div role="tablist" aria-label="Element type" className="flex gap-1.5 overflow-x-auto">
+            <div role="tablist" aria-label="Element type" className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4">
                 {TABS.map(({ id, label }) => (
                     <button
                         key={id}
@@ -53,8 +53,8 @@ export function ElementsCarousel() {
                         role="tab"
                         aria-selected={tab === id}
                         onClick={() => setTab(id)}
-                        className={`h-8 shrink-0 rounded-full px-3 text-xs font-medium transition-colors ${
-                            tab === id ? "bg-[#1c8096] text-white" : "bg-gray-100 text-gray-600"
+                        className={`press type-footnote h-8 shrink-0 rounded-full px-3.5 font-semibold outline-none focus-visible:ring-2 focus-visible:ring-teal ${
+                            tab === id ? "bg-teal text-white" : "bg-grouped text-ink/75"
                         }`}
                     >
                         {label}
@@ -62,20 +62,20 @@ export function ElementsCarousel() {
                 ))}
             </div>
 
-            <div className="-mx-4 flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-px-4 px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-2 overflow-x-auto scroll-px-4 px-4 pb-1">
                 {tab === "shapes" &&
                     SHAPES.map((shape) => (
                         <button key={shape.element} type="button" aria-label={`Add ${shape.label}`} onClick={() => addShape(shape.element)} className={card}>
-                            {shape.icon("#4b5563")}
+                            {shape.icon("#3a4250")}
                         </button>
                     ))}
 
-                {tab !== "shapes" && library.status === "loading" && <p className="py-5 text-sm text-gray-500">Loading…</p>}
+                {tab !== "shapes" && library.status === "loading" && <p className="type-footnote py-5 text-graphite">Loading…</p>}
 
                 {tab !== "shapes" && library.status === "error" && (
-                    <p className="py-5 text-sm text-gray-600">
+                    <p className="type-footnote py-5 text-graphite">
                         Couldn&apos;t load illustrations.{" "}
-                        <button type="button" onClick={() => void load()} className="font-medium text-[#1c8096] underline">
+                        <button type="button" onClick={() => void load()} className="font-semibold text-teal">
                             Retry
                         </button>
                     </p>
@@ -96,7 +96,7 @@ export function ElementsCarousel() {
                 ))}
             </div>
 
-            {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+            {error && <p role="alert" className="type-footnote text-fault">{error}</p>}
         </section>
     );
 }

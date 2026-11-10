@@ -1,12 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { motion } from "framer-motion";
 
 import { useEditor, type EditorTool } from "../EditorContext";
 import { ElementsMenu } from "./ElementsMenu";
 import { PencilIcon, SelectIcon, TextIcon } from "./icons";
-import { ACTIVE_COLOR, IDLE_COLOR, ToolTooltip, toolButtonClass } from "./toolbar";
+import { ACTIVE_COLOR, IDLE_COLOR, ToolHighlight, ToolTooltip, toolButtonClass } from "./toolbar";
 
 interface ToolItem {
     label: string;
@@ -17,17 +16,17 @@ interface ToolItem {
 const SELECT: ToolItem = {
     label: "Select",
     tool: "Select",
-    icon: (color) => <SelectIcon width={25} height={25} strokeWidth={1.5} color={color} />,
+    icon: (color) => <SelectIcon width={24} height={24} strokeWidth={1.5} color={color} />,
 };
 const PEN: ToolItem = {
     label: "Pen",
     tool: "Pen",
-    icon: (color) => <PencilIcon width={20} height={25} strokeWidth={1.5} color={color} />,
+    icon: (color) => <PencilIcon width={19} height={24} strokeWidth={1.5} color={color} />,
 };
 const TEXT: ToolItem = {
     label: "Text",
     tool: "Text",
-    icon: (color) => <TextIcon width={25} height={25} strokeWidth={1} color={color} />,
+    icon: (color) => <TextIcon width={24} height={24} strokeWidth={1} color={color} />,
 };
 
 function ToolButton({ item }: { item: ToolItem }) {
@@ -37,31 +36,26 @@ function ToolButton({ item }: { item: ToolItem }) {
     return (
         <li className="group relative">
             <button type="button" aria-label={item.label} aria-pressed={active} onClick={() => setTool(item.tool)} className={toolButtonClass(active)}>
-                {item.icon(active ? ACTIVE_COLOR : IDLE_COLOR)}
+                {active && <ToolHighlight />}
+                <span className="relative">{item.icon(active ? ACTIVE_COLOR : IDLE_COLOR)}</span>
             </button>
             <ToolTooltip label={item.label} />
         </li>
     );
 }
 
-/** Slim tool rail on the left edge of the desktop viewer. */
+/** Floating tool rail on the left edge of the desktop viewer. */
 export function SideNav() {
     return (
-        <motion.div
-            className="absolute left-4 top-1/2 z-10 hidden flex-col items-center justify-center gap-2 md:flex"
-            initial={{ opacity: 0, translateX: -20, translateY: "-50%" }}
-            animate={{ opacity: 1, translateX: 0, translateY: "-50%" }}
-            exit={{ opacity: 0, translateX: -20 }}
-            transition={{ duration: 0.5 }}
-        >
-            <nav aria-label="Tools" className="rounded-[10px] border border-rule bg-white p-1 shadow-[0_1px_2px_rgba(31,39,51,0.06)]">
-                <ul className="flex flex-col gap-0.5">
+        <div className="absolute left-4 top-1/2 z-10 hidden -translate-y-1/2 md:block">
+            <nav aria-label="Tools" className="material-float rounded-2xl p-1.5">
+                <ul className="flex flex-col gap-1">
                     <ToolButton item={SELECT} />
                     <ToolButton item={PEN} />
                     <ElementsMenu />
                     <ToolButton item={TEXT} />
                 </ul>
             </nav>
-        </motion.div>
+        </div>
     );
 }

@@ -1,22 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { ArrowArcLeft, ArrowArcRight, DotsThree, DownloadSimple, FileArrowUp, Trash } from "@phosphor-icons/react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { DotsThree, DownloadSimple, FileArrowUp, Trash } from "@phosphor-icons/react";
 
 import { useExport } from "../export/useExport";
-import { useMode } from "../modes/ModeContext";
 import { usePlotter } from "../plotter/PlotterContext";
 import useCanvas from "../workspace/canvas/CanvasContext";
 
-/** "⋯" button in the mobile card footer: export, plot a G-code file, undo, redo and delete. */
-export function MoreMenu() {
+/**
+ * "⋯" in the phone Edit bar over the page: export, plot a G-code file and delete the
+ * selection. The menu grows down out of the button and goes back the same way.
+ */
+export function MoreMenu({ className = "" }: { className?: string }) {
     const { workspace } = useCanvas() ?? {};
     const { exporting, exportAs, ready } = useExport();
-    const isEditMode = useMode().mode === "edit";
     const plotter = usePlotter();
     const [open, setOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const reduceMotion = useReducedMotion();
 
     useEffect(() => {
         if (!open) return;
@@ -49,9 +51,7 @@ export function MoreMenu() {
                 aria-haspopup="menu"
                 aria-expanded={open}
                 onClick={() => setOpen(!open)}
-                className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-colors ${
-                    open ? "border-[#1c8096] bg-gray-100 text-[#1c8096]" : "border-gray-200 text-gray-600"
-                }`}
+                className={`${className} ${open ? "bg-black/[0.07]" : ""}`}
             >
                 <DotsThree size={22} weight="bold" />
             </button>
@@ -61,11 +61,11 @@ export function MoreMenu() {
                     <motion.div
                         role="menu"
                         aria-label="More"
-                        className="absolute bottom-full right-0 mb-2 w-56 overflow-hidden rounded-2xl bg-white py-1 shadow-[0_8px_30px_rgba(0,0,0,0.15)]"
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 8 }}
-                        transition={{ duration: 0.15 }}
+                        className="material-float absolute right-0 top-full z-30 mt-2 w-56 origin-top-right overflow-hidden rounded-2xl py-1"
+                        initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
+                        transition={{ type: "spring", bounce: 0, duration: 0.28 }}
                     >
                         <MenuItem icon={<DownloadSimple size={18} />} disabled={!ready || exporting !== null} onClick={run(() => void exportAs("svg"))}>
                             {exporting === "svg" ? "Exporting…" : "Export SVG"}
@@ -80,14 +80,8 @@ export function MoreMenu() {
                         >
                             Plot G-code file…
                         </MenuItem>
-                        <div aria-hidden className="my-1 h-px bg-gray-100" />
-                        <MenuItem icon={<ArrowArcLeft size={18} />} disabled={!workspace || !isEditMode} onClick={run(() => workspace?.undo())}>
-                            Undo
-                        </MenuItem>
-                        <MenuItem icon={<ArrowArcRight size={18} />} disabled={!workspace || !isEditMode} onClick={run(() => workspace?.redo())}>
-                            Redo
-                        </MenuItem>
-                        <MenuItem icon={<Trash size={18} />} disabled={!workspace || !isEditMode} onClick={run(() => workspace?.handleDelete())}>
+                        <div aria-hidden className="mx-4 my-1 h-px bg-separator" />
+                        <MenuItem icon={<Trash size={18} />} destructive disabled={!workspace} onClick={run(() => workspace?.handleDelete())}>
                             Delete selected
                         </MenuItem>
                     </motion.div>
@@ -97,19 +91,33 @@ export function MoreMenu() {
     );
 }
 
-function MenuItem({ icon, children, disabled, onClick }: { icon: ReactNode; children: ReactNode; disabled?: boolean; onClick: () => void }) {
+function MenuItem({
+    icon,
+    children,
+    disabled,
+    destructive = false,
+    onClick,
+}: {
+    icon: ReactNode;
+    children: ReactNode;
+    disabled?: boolean;
+    destructive?: boolean;
+    onClick: () => void;
+}) {
     return (
         <button
             type="button"
             role="menuitem"
             disabled={disabled}
             onClick={onClick}
-            className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-gray-700 transition-colors active:bg-gray-100 disabled:opacity-40"
+            className={`type-body flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left outline-none transition-colors active:bg-black/[0.06] focus-visible:bg-black/[0.06] disabled:opacity-35 ${
+                destructive ? "text-fault" : "text-ink"
+            }`}
         >
-            <span aria-hidden className="text-gray-500">
+            {children}
+            <span aria-hidden className={destructive ? "text-fault" : "text-ink/60"}>
                 {icon}
             </span>
-            {children}
         </button>
     );
 }

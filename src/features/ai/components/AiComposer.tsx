@@ -8,8 +8,8 @@ import { CATEGORY_CHOICES, EXAMPLE_PROMPTS, useAiStudio } from "../AiStudioConte
 import { LIMITS } from "../constants";
 
 /**
- * The AI Creative Studio prompt: a text field, a category choice, example prompts and
- * the Generate button. `compact` is the phone layout inside the bottom card.
+ * The AI Studio prompt card: the idea, the kind of design and Generate, with example
+ * prompts underneath. `compact` is the phone layout (16 px text so iOS doesn't zoom).
  */
 export function AiComposer({ compact = false }: { compact?: boolean }) {
     const { prompt, setPrompt, category, setCategory, busy, generate } = useAiStudio();
@@ -32,33 +32,33 @@ export function AiComposer({ compact = false }: { compact?: boolean }) {
     };
 
     return (
-        <form
-            aria-label="Describe a design"
-            className={compact ? "space-y-2.5" : "space-y-3"}
-            onSubmit={(event) => {
-                event.preventDefault();
-                void generate();
-            }}
-        >
-            <label className="block">
-                <span className="sr-only">Describe your idea</span>
-                <textarea
-                    ref={field}
-                    value={prompt}
-                    onChange={(event) => setPrompt(event.target.value.slice(0, LIMITS.promptMax))}
-                    onKeyDown={onKeyDown}
-                    rows={compact ? 2 : 3}
-                    maxLength={LIMITS.promptMax}
-                    disabled={generating}
-                    placeholder="A continuous-line drawing of a heron at dawn…"
-                    className={`w-full resize-none rounded-xl border border-rule bg-white px-3.5 py-3 text-ink placeholder:text-graphite/60 disabled:bg-desk/50 ${
-                        compact ? "text-base" : "text-[15px] leading-6"
-                    } ${focusRing}`}
-                />
-            </label>
+        <div className="space-y-3">
+            <form
+                aria-label="Describe a design"
+                className="space-y-3 rounded-[1.25rem] bg-white p-4 transition-shadow focus-within:shadow-[0_0_0_2px_rgb(28_128_150/0.35)]"
+                onSubmit={(event) => {
+                    event.preventDefault();
+                    void generate();
+                }}
+            >
+                <label className="block">
+                    <span className="sr-only">Describe your idea</span>
+                    <textarea
+                        ref={field}
+                        value={prompt}
+                        onChange={(event) => setPrompt(event.target.value.slice(0, LIMITS.promptMax))}
+                        onKeyDown={onKeyDown}
+                        rows={3}
+                        maxLength={LIMITS.promptMax}
+                        disabled={generating}
+                        placeholder="A continuous-line drawing of a heron at dawn…"
+                        className={`block w-full resize-none bg-transparent text-ink outline-none placeholder:text-graphite/60 disabled:text-graphite ${
+                            compact ? "text-base leading-6" : "type-body"
+                        }`}
+                    />
+                </label>
 
-            <div className={`flex gap-2 ${compact ? "flex-col" : "items-center justify-between"}`}>
-                <div role="radiogroup" aria-label="Kind of design" className="-mx-0.5 flex gap-1 overflow-x-auto px-0.5 [scrollbar-width:none]">
+                <div role="radiogroup" aria-label="Kind of design" className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4">
                     {CATEGORY_CHOICES.map(({ id, label }) => (
                         <button
                             key={id}
@@ -67,8 +67,8 @@ export function AiComposer({ compact = false }: { compact?: boolean }) {
                             aria-checked={category === id}
                             disabled={generating}
                             onClick={() => setCategory(id)}
-                            className={`h-8 shrink-0 rounded-full px-3 text-[13px] transition-colors disabled:opacity-50 ${focusRing} ${
-                                category === id ? "bg-teal/10 font-medium text-teal" : "text-graphite hover:bg-desk hover:text-ink"
+                            className={`press type-footnote h-8 shrink-0 rounded-full px-3.5 font-semibold disabled:opacity-50 ${focusRing} ${
+                                category === id ? "bg-teal text-white" : "bg-grouped text-ink/75 hover:text-ink"
                             }`}
                         >
                             {label}
@@ -76,16 +76,14 @@ export function AiComposer({ compact = false }: { compact?: boolean }) {
                     ))}
                 </div>
 
-                <div className={`flex items-center gap-3 ${compact ? "justify-between" : ""}`}>
-                    <span className="font-mono text-[11px] tabular-nums text-graphite" aria-label="Characters used">
+                <div className="flex items-center justify-between gap-3 border-t border-separator pt-3">
+                    <span className="type-caption tabular-nums text-graphite" aria-label="Characters used">
                         {prompt.length}/{LIMITS.promptMax}
                     </span>
                     <button
                         type="submit"
                         disabled={generating || tooShort}
-                        className={`flex h-10 items-center justify-center gap-2 rounded-lg bg-teal px-4 text-[13px] font-medium text-white transition-colors hover:bg-teal-dark disabled:cursor-not-allowed disabled:bg-teal/40 ${
-                            compact ? "flex-1" : ""
-                        } ${focusRing}`}
+                        className={`press type-footnote flex h-10 items-center justify-center gap-2 rounded-full bg-teal px-5 font-semibold text-white hover:bg-teal-dark disabled:cursor-not-allowed disabled:bg-teal/35 ${focusRing}`}
                     >
                         {generating ? (
                             <CircleNotch size={16} weight="bold" className="motion-safe:animate-spin" />
@@ -95,18 +93,18 @@ export function AiComposer({ compact = false }: { compact?: boolean }) {
                         {generating ? "Creating…" : "Generate"}
                     </button>
                 </div>
-            </div>
+            </form>
 
-            <div className={compact ? "space-y-1.5" : "flex flex-wrap items-center gap-1.5"}>
-                <span className="text-xs text-graphite">Try</span>
-                <ul className={`flex gap-1.5 ${compact ? "overflow-x-auto [scrollbar-width:none]" : "flex-wrap"}`}>
+            <div className="space-y-1.5">
+                <p className="type-footnote px-1 font-semibold text-graphite">Try</p>
+                <ul className={`flex gap-1.5 ${compact ? "no-scrollbar -mx-4 overflow-x-auto px-4" : "flex-wrap"}`}>
                     {EXAMPLE_PROMPTS.map((example) => (
                         <li key={example.prompt} className="shrink-0">
                             <button
                                 type="button"
                                 disabled={generating}
                                 onClick={() => applyExample(example)}
-                                className={`rounded-full border border-rule bg-white px-3 py-1 text-xs text-ink transition-colors hover:bg-desk disabled:opacity-50 ${focusRing}`}
+                                className={`press type-footnote surface-raised rounded-full px-3.5 py-1.5 text-ink hover:bg-white/70 disabled:opacity-50 ${focusRing}`}
                             >
                                 {example.prompt}
                             </button>
@@ -114,6 +112,6 @@ export function AiComposer({ compact = false }: { compact?: boolean }) {
                     ))}
                 </ul>
             </div>
-        </form>
+        </div>
     );
 }

@@ -1,50 +1,43 @@
 "use client";
 
 import { useCallback, useRef, useState, type ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { PaperPlaneTilt, Shapes, SquaresFour } from "@phosphor-icons/react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { PaperPlaneTilt, Shapes } from "@phosphor-icons/react";
 
-import { useMode } from "../modes/ModeContext";
-import { AutoModeError, ModeTabs } from "../modes/ModeSwitcher";
-import { AutoSection } from "../desktop/AutoSection";
-import { AiComposer } from "../ai/components/AiComposer";
+import { PrimaryButton } from "../desktop/parts";
+import { ModeTabBar } from "../modes/ModeTabBar";
 import { useEditor } from "../workspace/editor/EditorContext";
 import { PencilIcon, SelectIcon, TextIcon } from "../workspace/editor/nav/icons";
 import { usePlotter } from "../plotter/PlotterContext";
-import { PlotterHud, PlotterStatus } from "../plotter/PlotterHud";
+import { PlotterHud } from "../plotter/PlotterHud";
+import { CanvasActions } from "./CanvasActions";
 import { ElementsCarousel } from "./ElementsCarousel";
 import { Joystick } from "./Joystick";
 import { MobileTextEditor, type TextEditorHandle } from "./MobileTextEditor";
-import { MoreMenu } from "./MoreMenu";
 
 const ACTIVE = "#1c8096";
-const IDLE = "#4b5563";
+const IDLE = "#3a4250";
 
-type Option = "select" | "pen" | "text" | "elements" | "mode";
+type Option = "select" | "pen" | "text" | "elements";
 
 const OPTIONS: { id: Option; label: string; icon: (color: string) => ReactNode }[] = [
     { id: "select", label: "Select", icon: (color) => <SelectIcon width={24} height={24} strokeWidth={1.5} color={color} /> },
     { id: "pen", label: "Pen", icon: (color) => <PencilIcon width={20} height={24} strokeWidth={1.5} color={color} /> },
     { id: "text", label: "Text", icon: (color) => <TextIcon width={24} height={24} strokeWidth={1} color={color} /> },
     { id: "elements", label: "Elements", icon: (color) => <Shapes size={23} color={color} /> },
-    { id: "mode", label: "Mode", icon: (color) => <SquaresFour size={23} color={color} /> },
 ];
 
 /**
- * Mobile controls: a card with rounded top corners covering the bottom half of the
- * screen. A row of option icons (like the desktop tool bar, laid out flat); tapping one
- * shows only that option's panel, tapping it again folds the panel away. The footer
- * holds Send (placeholder) and the More menu.
+ * Phone Edit controls: the page fills the top half (with undo, redo and more floating
+ * over it) and this sheet the bottom half. Four tools across the top; tapping one shows
+ * only that tool's panel, tapping it again folds the panel away. Below: Plot page (or
+ * the plot's progress while one runs) and the mode tab bar.
  */
 export function MobileSheet() {
-    const { mode } = useMode();
-    const isEditMode = mode === "edit";
     const { tool, setTool } = useEditor();
     const [panel, setPanel] = useState<Option | null>(null);
     const textEditor = useRef<TextEditorHandle>(null);
-
-    // Outside Edit mode only the mode switcher applies.
-    const activePanel = isEditMode ? panel : "mode";
+    const reduceMotion = useReducedMotion();
 
     const choose = (option: Option) => {
         if (panel === "text") textEditor.current?.finish();
@@ -64,118 +57,113 @@ export function MobileSheet() {
 
     // With no panel open, the icon of the active drawing tool stays highlighted.
     const highlighted = (option: Option) =>
-        activePanel ? activePanel === option : (option === "select" && tool === "Select") || (option === "pen" && tool === "Pen");
+        panel ? panel === option : (option === "select" && tool === "Select") || (option === "pen" && tool === "Pen");
 
     return (
-        <section
-            aria-label="Controls"
-            className="fixed inset-x-0 bottom-0 z-30 flex h-[50dvh] flex-col rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.12)]"
-        >
-            {isEditMode && <Joystick />}
+        <>
+            <CanvasActions />
 
-            <div aria-hidden className="mx-auto mb-1 mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-gray-200" />
+            <section
+                aria-label="Edit controls"
+                className="fixed inset-x-0 bottom-0 z-30 flex h-[50dvh] flex-col rounded-t-[1.75rem] bg-white shadow-[0_-0.5px_0_rgb(0_0_0/0.06),0_-12px_36px_rgb(31_39_51/0.10)]"
+            >
+                <Joystick />
 
-            <nav aria-label="Options" className="shrink-0 px-4 pt-1">
-                <ul className="flex justify-between gap-1 rounded-2xl bg-gray-50 p-1">
-                    {OPTIONS.map((option) => {
-                        const active = highlighted(option.id);
-                        const disabled = !isEditMode && option.id !== "mode";
-                        return (
-                            <li key={option.id} className="flex-1">
-                                <button
-                                    type="button"
-                                    aria-pressed={active}
-                                    aria-expanded={activePanel === option.id}
-                                    disabled={disabled}
-                                    onClick={() => choose(option.id)}
-                                    className={`flex w-full flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-medium transition-colors disabled:opacity-35 ${
-                                        active ? "bg-white text-[#1c8096] shadow-sm" : "text-gray-500"
-                                    }`}
-                                >
-                                    <span className="flex h-6 items-center">{option.icon(active ? ACTIVE : IDLE)}</span>
-                                    {option.label}
-                                </button>
-                            </li>
-                        );
-                    })}
-                </ul>
-            </nav>
+                <div aria-hidden className="mx-auto mb-1.5 mt-2 h-[5px] w-9 shrink-0 rounded-full bg-black/[0.12]" />
 
-            <div className="flex-1 overflow-y-auto px-4 pb-4 pt-4">
-                {/* Always mounted, so tapping text on the canvas can open it. */}
-                {isEditMode && <MobileTextEditor ref={textEditor} open={activePanel === "text"} onRequestOpen={openText} />}
+                <nav aria-label="Tools" className="shrink-0 px-4">
+                    <ul className="flex gap-1 rounded-2xl bg-grouped p-1">
+                        {OPTIONS.map((option) => {
+                            const active = highlighted(option.id);
+                            return (
+                                <li key={option.id} className="flex-1">
+                                    <button
+                                        type="button"
+                                        aria-pressed={active}
+                                        aria-expanded={panel === option.id}
+                                        onClick={() => choose(option.id)}
+                                        className={`press type-caption relative flex w-full flex-col items-center gap-0.5 rounded-xl py-1.5 font-semibold outline-none focus-visible:ring-2 focus-visible:ring-teal ${
+                                            active ? "text-teal" : "text-ink/70"
+                                        }`}
+                                    >
+                                        {active && (
+                                            <motion.span
+                                                layoutId="sheet-tool-highlight"
+                                                aria-hidden
+                                                className="absolute inset-0 rounded-xl bg-white shadow-[0_0_0_0.5px_rgb(0_0_0/0.05),0_1px_3px_rgb(0_0_0/0.1)]"
+                                                transition={reduceMotion ? { duration: 0 } : { type: "spring", bounce: 0, duration: 0.3 }}
+                                            />
+                                        )}
+                                        <span className="relative flex h-6 items-center">{option.icon(active ? ACTIVE : IDLE)}</span>
+                                        <span className="relative">{option.label}</span>
+                                    </button>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </nav>
 
-                <AnimatePresence mode="wait" initial={false}>
-                    <motion.div
-                        key={activePanel ?? "none"}
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -6 }}
-                        transition={{ duration: 0.15 }}
-                    >
-                        {activePanel === null && <Hint>Pick an option above.</Hint>}
-                        {activePanel === "select" && (
-                            <Hint>
-                                Tap an object on the page to select it. Move it with the joystick; double-tap the joystick to send it
-                                to one of 9 spots on the page.
-                            </Hint>
-                        )}
-                        {activePanel === "pen" && <Hint>Draw on the page with your finger.</Hint>}
-                        {activePanel === "elements" && <ElementsCarousel />}
-                        {activePanel === "mode" && (
-                            <div className="space-y-3">
-                                <ModeTabs fill className="bg-gray-50" />
-                                <AutoModeError className="text-center" />
-                                {mode === "auto" && <AutoSection />}
-                                {mode === "ai" && <AiComposer compact />}
-                            </div>
-                        )}
-                    </motion.div>
-                </AnimatePresence>
-            </div>
+                <div className="relative min-h-0 flex-1 overflow-y-auto px-4 pb-2 pt-3">
+                    {/* Always mounted, so tapping text on the canvas can open it. */}
+                    <MobileTextEditor ref={textEditor} open={panel === "text"} onRequestOpen={openText} />
 
-            <Footer />
-        </section>
+                    <AnimatePresence mode="popLayout" initial={false}>
+                        <motion.div
+                            key={panel ?? "none"}
+                            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+                            transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+                        >
+                            {panel === null && <Hint>Pick a tool above.</Hint>}
+                            {panel === "select" && (
+                                <Hint>
+                                    Tap an object on the page to select it. Move it with the joystick; double-tap the joystick to send it
+                                    to one of 9 spots on the page.
+                                </Hint>
+                            )}
+                            {panel === "pen" && <Hint>Draw on the page with your finger.</Hint>}
+                            {panel === "elements" && <ElementsCarousel />}
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
+
+                <Footer />
+            </section>
+        </>
     );
 }
 
 function Hint({ children }: { children: ReactNode }) {
-    return <p className="px-1 py-2 text-center text-sm leading-relaxed text-gray-500">{children}</p>;
+    return <p className="type-footnote px-2 py-2 text-center text-graphite">{children}</p>;
 }
 
+/** Plot page, or the plot's progress and controls while one is up; then the tab bar. */
 function Footer() {
     const { send, sending, busy, gatewayConnected, error, dismiss, job } = usePlotter();
-    const isEditMode = useMode().mode === "edit";
 
     return (
-        <footer className="shrink-0 space-y-2 border-t border-gray-100 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            <PlotterHud compact />
+        <footer className="shrink-0 space-y-2 px-4 pt-2">
+            {job ? (
+                <PlotterHud compact showStatus={false} className="rounded-2xl bg-grouped p-3" />
+            ) : (
+                <PrimaryButton
+                    icon={<PaperPlaneTilt size={18} weight="fill" />}
+                    onClick={() => void send()}
+                    disabled={!gatewayConnected || busy || sending}
+                >
+                    {sending ? "Sending…" : busy ? "Plotter busy" : "Plot page"}
+                </PrimaryButton>
+            )}
             {error && (
-                <p role="alert" className="flex items-center justify-center gap-2 text-center text-xs text-red-600">
+                <p role="alert" className="type-footnote flex items-center justify-center gap-2 text-center text-fault">
                     {error}
-                    <button type="button" onClick={dismiss} className="font-medium underline">
+                    <button type="button" onClick={dismiss} className="font-semibold">
                         OK
                     </button>
                 </p>
             )}
-            <div className="flex items-center gap-2">
-                <button
-                    type="button"
-                    onClick={() => void send()}
-                    disabled={!isEditMode || !gatewayConnected || busy || sending}
-                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#1c8096] text-sm font-medium text-white transition-opacity active:opacity-80 disabled:opacity-45"
-                >
-                    <PaperPlaneTilt size={18} weight="bold" />
-                    {sending ? "Sending…" : busy ? "Plotting…" : "Send"}
-                </button>
-                <MoreMenu />
-            </div>
-            {/* The progress card shows the status itself while a plot is up. */}
-            {!job && (
-                <div className="flex justify-center">
-                    <PlotterStatus />
-                </div>
-            )}
+            <ModeTabBar docked />
         </footer>
     );
 }

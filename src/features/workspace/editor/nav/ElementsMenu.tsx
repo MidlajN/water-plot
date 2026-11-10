@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import {
     ILLUSTRATION_CATEGORIES,
@@ -12,7 +12,7 @@ import {
 import type { Illustration } from "@/features/illustrations/library";
 import { useEditor, type DrawingElement } from "../EditorContext";
 import { SHAPES } from "./shapes";
-import { ACTIVE_COLOR, IDLE_COLOR, ToolTooltip, toolButtonClass } from "./toolbar";
+import { ACTIVE_COLOR, IDLE_COLOR, ToolHighlight, ToolTooltip, toolButtonClass } from "./toolbar";
 
 /**
  * Elements button: opens a dropdown with the drawing shapes and the illustration
@@ -25,6 +25,7 @@ export function ElementsMenu() {
     const { inserting, error: insertError, insert, clearError } = useInsertIllustration();
     const [open, setOpen] = useState(false);
     const containerRef = useRef<HTMLLIElement>(null);
+    const reduceMotion = useReducedMotion();
 
     const active = tool === "Elements";
     const current = SHAPES.find((shape) => shape.element === element) ?? SHAPES[1];
@@ -74,9 +75,10 @@ export function ElementsMenu() {
                 aria-haspopup="menu"
                 aria-expanded={open}
                 onClick={toggle}
-                className={toolButtonClass(highlighted)}
+                className={toolButtonClass(active, open)}
             >
-                {current.icon(highlighted ? ACTIVE_COLOR : IDLE_COLOR)}
+                {active && <ToolHighlight />}
+                <span className="relative">{current.icon(highlighted ? ACTIVE_COLOR : IDLE_COLOR)}</span>
             </button>
             <ToolTooltip label="Elements" hidden={open} />
 
@@ -85,11 +87,12 @@ export function ElementsMenu() {
                     <motion.div
                         role="menu"
                         aria-label="Elements"
-                        className="absolute left-full top-0 z-20 ml-3 max-h-[70vh] w-72 overflow-y-auto rounded-lg bg-white p-3 shadow-md"
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -8 }}
-                        transition={{ duration: 0.15 }}
+                        // Grows out of its button (top-left origin) and returns the same way.
+                        className="material-float absolute left-full top-0 z-20 ml-3 max-h-[70vh] w-72 origin-top-left overflow-y-auto rounded-2xl p-3"
+                        initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
+                        transition={{ type: "spring", bounce: 0, duration: 0.28 }}
                     >
                         <MenuSection title="Shapes">
                             <div className="grid grid-cols-4 gap-1">
@@ -104,7 +107,9 @@ export function ElementsMenu() {
                                             aria-label={shape.label}
                                             title={shape.label}
                                             onClick={() => pickShape(shape.element)}
-                                            className={`flex h-12 items-center justify-center rounded-md transition-colors hover:bg-gray-100 ${selected ? "bg-gray-100" : ""}`}
+                                            className={`press flex h-12 items-center justify-center rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-teal ${
+                                                selected ? "bg-teal/12" : "hover:bg-black/[0.05]"
+                                            }`}
                                         >
                                             {shape.icon(selected ? ACTIVE_COLOR : IDLE_COLOR)}
                                         </button>
@@ -113,12 +118,12 @@ export function ElementsMenu() {
                             </div>
                         </MenuSection>
 
-                        {library.status === "loading" && <p className="py-4 text-center text-sm text-gray-500">Loading illustrations…</p>}
+                        {library.status === "loading" && <p className="type-footnote py-4 text-center text-graphite">Loading illustrations…</p>}
 
                         {library.status === "error" && (
-                            <p className="py-4 text-center text-sm text-gray-600">
+                            <p className="type-footnote py-4 text-center text-graphite">
                                 Couldn&apos;t load illustrations.{" "}
-                                <button type="button" onClick={() => void loadLibrary()} className="font-medium text-[#1c8096] underline">
+                                <button type="button" onClick={() => void loadLibrary()} className="font-semibold text-teal">
                                     Retry
                                 </button>
                             </p>
@@ -140,7 +145,7 @@ export function ElementsMenu() {
                                                     title={item.name}
                                                     disabled={inserting !== null}
                                                     onClick={() => void insertIllustration(item)}
-                                                    className="flex h-14 items-center justify-center rounded-md p-1 transition-colors hover:bg-gray-100 disabled:opacity-50"
+                                                    className="press flex h-14 items-center justify-center rounded-xl p-1 outline-none hover:bg-black/[0.05] focus-visible:ring-2 focus-visible:ring-teal disabled:opacity-50"
                                                 >
                                                     {/* eslint-disable-next-line @next/next/no-img-element -- small SVG thumbnails from our own API */}
                                                     <img src={illustrationUrl(item.id)} alt="" className="h-11 w-11 object-contain" />
@@ -151,7 +156,7 @@ export function ElementsMenu() {
                                 );
                             })}
 
-                        {insertError && <p role="alert" className="mt-2 text-sm text-red-600">{insertError}</p>}
+                        {insertError && <p role="alert" className="type-footnote mt-2 text-fault">{insertError}</p>}
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -162,7 +167,7 @@ export function ElementsMenu() {
 function MenuSection({ title, children }: { title: string; children: ReactNode }) {
     return (
         <section className="mb-3 last:mb-0">
-            <h3 className="mb-1.5 px-1 text-xs font-medium uppercase tracking-wide text-gray-500">{title}</h3>
+            <h3 className="type-caption mb-1.5 px-1 font-semibold uppercase tracking-[0.04em] text-graphite">{title}</h3>
             {children}
         </section>
     );

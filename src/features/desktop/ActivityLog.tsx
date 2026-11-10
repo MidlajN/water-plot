@@ -10,14 +10,14 @@ export function ActivityLog() {
     const { activity } = usePlotter();
 
     if (activity.length === 0) {
-        return <p className="text-xs text-graphite">Plotter events will show up here.</p>;
+        return <p className="type-footnote text-graphite">Plotter events will show up here.</p>;
     }
 
     return (
         <ol className="max-h-64 space-y-1.5 overflow-y-auto pr-1" aria-live="polite">
             {activity.map((entry) => (
-                <li key={entry.id} className="flex items-baseline gap-3 text-[13px] leading-5">
-                    <time dateTime={new Date(entry.at).toISOString()} className="shrink-0 font-mono text-[11px] tabular-nums text-graphite">
+                <li key={entry.id} className="type-footnote flex items-baseline gap-3">
+                    <time dateTime={new Date(entry.at).toISOString()} className="type-caption shrink-0 tabular-nums text-graphite">
                         {formatClock(entry.at)}
                     </time>
                     <span className={`min-w-0 ${entry.level === "error" ? "text-fault" : "text-ink"}`}>

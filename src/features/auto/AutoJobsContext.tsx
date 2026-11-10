@@ -12,7 +12,10 @@ interface AutoJobsValue {
     jobs: PlotJobSummary[];
     status: "loading" | "ready" | "error";
     selected: PlotJobSummary | null;
-    select: (id: number) => void;
+    /** Picks a plot; null follows the newest one as new plots arrive. */
+    select: (id: number | null) => void;
+    /** True while the selection follows the newest plot. */
+    following: boolean;
     refresh: () => Promise<unknown>;
     timezone: string | null;
     setTimezone: (timezone: string) => Promise<void>;
@@ -89,12 +92,14 @@ export function AutoJobsProvider({ children }: PropsWithChildren) {
         }
     }, [timezone]);
 
-    // The chosen plot, or the newest one.
-    const selected = jobs.find((item) => item.id === selectedId) ?? jobs[0] ?? null;
+    // The chosen plot, or the newest one (also when the chosen one has aged out of the list).
+    const chosen = jobs.find((item) => item.id === selectedId);
+    const selected = chosen ?? jobs[0] ?? null;
+    const following = !chosen;
 
     const value = useMemo<AutoJobsValue>(
-        () => ({ jobs, status, selected, select: setSelectedId, refresh, timezone, setTimezone, timezoneError }),
-        [jobs, status, selected, refresh, timezone, setTimezone, timezoneError],
+        () => ({ jobs, status, selected, select: setSelectedId, following, refresh, timezone, setTimezone, timezoneError }),
+        [jobs, status, selected, following, refresh, timezone, setTimezone, timezoneError],
     );
 
     return <AutoJobsContext.Provider value={value}>{children}</AutoJobsContext.Provider>;
