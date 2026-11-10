@@ -14,8 +14,8 @@ const QUOTE_FONT = getSingleLineFont("HersheyScript1");
 /** Area to the right of the clock the quote must fit in (viewBox units, i.e. mm). */
 const QUOTE_BOX = { left: 190, right: 670, top: 20, bottom: 270 };
 
-const MAX_FONT_SIZE = 18;
-const MIN_FONT_SIZE = 8;
+const MAX_FONT_SIZE = 36;
+const MIN_FONT_SIZE = 12;
 const LINE_HEIGHT = 1.4;
 
 /** Greedy word wrap by measured width. */

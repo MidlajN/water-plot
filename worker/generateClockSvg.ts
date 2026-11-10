@@ -1,8 +1,8 @@
-const WIDTH = 690;
 const HEIGHT = 290;
 
+/** Left centre of the page: 20 mm from the left edge, vertically centred. */
 const CLOCK_CENTER_X = 95;
-const CLOCK_CENTER_Y = 95;
+const CLOCK_CENTER_Y = HEIGHT / 2;
 const CLOCK_RADIUS = 75;
 
 function getTimeParts(date: Date, timezone: string) {
