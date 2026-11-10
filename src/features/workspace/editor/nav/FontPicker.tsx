@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 
+import { DURATION, EASE_IN, EASE_OUT } from "@/lib/motion";
 import { useEditor } from "../EditorContext";
 import { FontOptions, FontSizeControl, useTextStyle } from "./textStyle";
 
@@ -18,14 +19,13 @@ export function FontPicker() {
         <AnimatePresence>
             {visible && (
                 <motion.div
-                    className="absolute left-1/2 top-4 z-10 hidden items-center gap-1 rounded-[10px] border border-rule bg-white p-1 shadow-[0_1px_2px_rgba(31,39,51,0.06)] md:flex"
-                    initial={{ opacity: 0, x: "-50%", y: -10 }}
-                    animate={{ opacity: 1, x: "-50%", y: 0 }}
-                    exit={{ opacity: 0, x: "-50%", y: -10 }}
-                    transition={{ duration: 0.2 }}
+                    className="glass absolute top-8 left-1/2 z-10 hidden items-center gap-1 rounded-panel border border-line p-1 shadow-raised md:flex"
+                    initial={{ opacity: 0, x: "-50%", y: -6 }}
+                    animate={{ opacity: 1, x: "-50%", y: 0, transition: { duration: DURATION.base, ease: EASE_OUT } }}
+                    exit={{ opacity: 0, x: "-50%", y: -4, transition: { duration: DURATION.fast, ease: EASE_IN } }}
                 >
                     <FontOptions style={style} />
-                    <div aria-hidden className="mx-1 h-6 w-px bg-gray-200" />
+                    <div aria-hidden className="mx-1 h-6 w-px bg-line" />
                     <FontSizeControl style={style} />
                 </motion.div>
             )}

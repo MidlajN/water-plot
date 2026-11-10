@@ -12,6 +12,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 OUT="dist/plotter-studio-pi"
 STANDALONE=".next/standalone"
 
+# Remove the previous bundle first so the build can't trace it into the new one.
+rm -rf "$OUT"
 pnpm exec next build
 
 [ -f "$STANDALONE/server.js" ] || { echo "Error: $STANDALONE/server.js is missing (is output: \"standalone\" set?)" >&2; exit 1; }

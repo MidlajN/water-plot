@@ -14,6 +14,8 @@ import {
 
 import type { Canvas as FabricCanvas, FabricObject } from "fabric";
 
+import { readCanvasTheme, type CanvasTheme } from "./theme";
+
 export interface CanvasConfig {
     width: number;
     height: number;
@@ -34,10 +36,13 @@ export interface WorkspaceInstance {
     redo: () => void;
     /** Removes the selected object(s). */
     handleDelete: () => void;
+    /** Recolours the selection, sheet and desk from the design tokens. */
+    applyTheme: (theme: CanvasTheme) => void;
 }
 
 interface RulerInstance {
     rulerEnable: () => void;
+    setTheme: (theme: CanvasTheme) => void;
     destroy?: () => void;
 }
 
@@ -94,6 +99,7 @@ export function CanvasProvider({
 
         let workspaceInstance: WorkspaceInstance | null = null;
         let rulerInstance: RulerInstance | null = null;
+        let themeObserver: MutationObserver | null = null;
 
         const initializeCanvas = async () => {
         // Import browser-dependent modules only after mounting.
@@ -144,6 +150,18 @@ export function CanvasProvider({
         await instance.loadFromJSON();
         if (disposed) return;
 
+        // Canvas colours follow the theme: read the tokens where the canvas sits, and
+        // again whenever any data-theme attribute changes.
+        const applyTheme = () => {
+            if (!containerRef.current) return;
+            const theme = readCanvasTheme(containerRef.current);
+            instance.applyTheme(theme);
+            ruler.setTheme(theme);
+        };
+        applyTheme();
+        themeObserver = new MutationObserver(applyTheme);
+        themeObserver.observe(document.documentElement, { attributes: true, subtree: true, attributeFilter: ["data-theme"] });
+
         setWorkspace(instance);
         setCanvas(fabricCanvas);
         };
@@ -157,6 +175,7 @@ export function CanvasProvider({
         return () => {
         disposed = true;
 
+        themeObserver?.disconnect();
         rulerInstance?.destroy?.();
         workspaceInstance?.destroy();
         };

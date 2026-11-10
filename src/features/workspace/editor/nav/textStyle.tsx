@@ -144,8 +144,8 @@ export function FontOptions({ style, className = "" }: { style: TextStyle; class
                         title={label}
                         onMouseDown={keepFocus}
                         onClick={() => style.applyFont(id)}
-                        className={`flex h-10 shrink-0 items-center rounded-md px-3 transition-colors duration-300 hover:bg-gray-100 ${
-                            isSelected ? "bg-gray-100 text-[#1c8096]" : "text-gray-600"
+                        className={`focus-ring flex h-10 shrink-0 items-center rounded-[8px] px-3 transition-colors duration-150 ${
+                            isSelected ? "bg-accent-soft text-accent" : "text-muted hover:bg-surface-hover hover:text-text"
                         }`}
                     >
                         <svg
@@ -194,7 +194,7 @@ export function FontSizeControl({ style, className = "" }: { style: TextStyle; c
     };
 
     const stepButton =
-        "flex h-10 w-8 items-center justify-center rounded-md text-gray-600 transition-colors duration-300 hover:bg-gray-100 disabled:opacity-40";
+        "focus-ring flex h-10 w-8 items-center justify-center rounded-[8px] text-muted transition-colors duration-150 hover:bg-surface-hover hover:text-text disabled:opacity-40";
 
     return (
         <div role="group" aria-label="Font size" className={`flex items-center ${className}`}>
@@ -209,7 +209,7 @@ export function FontSizeControl({ style, className = "" }: { style: TextStyle; c
             >
                 <Minus size={14} weight="bold" />
             </button>
-            <label className="flex h-10 items-center gap-1 rounded-md px-1 text-sm text-gray-600 focus-within:bg-gray-100">
+            <label className="flex h-10 items-center gap-1 rounded-[8px] px-1 text-ui text-muted focus-within:bg-surface-hover focus-within:outline-2 focus-within:outline-focus">
                 <input
                     type="number"
                     inputMode="decimal"
@@ -228,7 +228,7 @@ export function FontSizeControl({ style, className = "" }: { style: TextStyle; c
                             event.currentTarget.blur();
                         }
                     }}
-                    className="w-12 bg-transparent text-right tabular-nums text-gray-800 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    className="numeric w-12 bg-transparent text-right text-text outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
                 <span aria-hidden>mm</span>
             </label>

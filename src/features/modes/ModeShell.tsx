@@ -1,5 +1,8 @@
 "use client";
 
+import { MotionConfig } from "framer-motion";
+
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { MobileSheet } from "../mobile/MobileSheet";
 import { PlotterProvider } from "../plotter/PlotterContext";
@@ -14,15 +17,20 @@ import { ModeProvider, useMode } from "./ModeContext";
 
 export function ModeShell() {
     return (
-        <ModeProvider>
-            <WorkspaceProviders>
-                <PlotterProvider>
-                    <AiStudioProvider>
-                        <Layout />
-                    </AiStudioProvider>
-                </PlotterProvider>
-            </WorkspaceProviders>
-        </ModeProvider>
+        // reducedMotion="user": with Reduce Motion on, framer keeps fades and drops movement.
+        <MotionConfig reducedMotion="user">
+            <TooltipProvider>
+                <ModeProvider>
+                    <WorkspaceProviders>
+                        <PlotterProvider>
+                            <AiStudioProvider>
+                                <Layout />
+                            </AiStudioProvider>
+                        </PlotterProvider>
+                    </WorkspaceProviders>
+                </ModeProvider>
+            </TooltipProvider>
+        </MotionConfig>
     );
 }
 
@@ -46,7 +54,7 @@ function Layout() {
     // place when the window crosses the breakpoint, so it is never remounted.
     return (
         <AutoJobsProvider>
-            <div className="md:flex md:h-screen md:overflow-hidden md:font-sans">
+            <div className="min-h-screen bg-bg text-text md:flex md:h-screen md:overflow-hidden">
                 {isMobile ? null : <DesktopSidebar />}
                 <div className="relative min-w-0 md:h-screen md:flex-1 md:bg-desk">
                     <WorkspaceSurface />

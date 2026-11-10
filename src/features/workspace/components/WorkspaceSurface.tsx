@@ -98,7 +98,7 @@ export function WorkspaceSurface() {
 
                 <div
                 ref={containerRef}
-                className="relative h-full w-full overflow-hidden border bg-gray-200 md:border-0 md:bg-desk"
+                className="relative h-full w-full overflow-hidden bg-surface-sunken"
                 >
                 <canvas ref={canvasRef} />
                 </div>

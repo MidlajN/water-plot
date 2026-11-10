@@ -19,7 +19,7 @@ type Tab = "shapes" | IllustrationCategory;
 const TABS: { id: Tab; label: string }[] = [{ id: "shapes", label: "Shapes" }, ...ILLUSTRATION_CATEGORIES];
 
 const card =
-    "flex h-16 w-16 shrink-0 snap-start items-center justify-center rounded-2xl border border-gray-100 bg-gray-50 transition-colors active:bg-gray-200 disabled:opacity-50";
+    "focus-ring flex size-16 shrink-0 snap-start items-center justify-center rounded-panel bg-paper text-[#111] shadow-hairline transition-transform duration-150 active:scale-95 disabled:opacity-50";
 
 /**
  * Mobile Elements picker: category chips over a sideways-scrolling strip of shapes or
@@ -44,7 +44,7 @@ export function ElementsCarousel() {
     const items = library.status === "ready" ? library.illustrations.filter((item) => item.category === tab) : [];
 
     return (
-        <section aria-label="Elements" className="space-y-2">
+        <section aria-label="Elements" className="grid grid-cols-1 gap-3">
             <div role="tablist" aria-label="Element type" className="flex gap-1.5 overflow-x-auto">
                 {TABS.map(({ id, label }) => (
                     <button
@@ -53,8 +53,8 @@ export function ElementsCarousel() {
                         role="tab"
                         aria-selected={tab === id}
                         onClick={() => setTab(id)}
-                        className={`h-8 shrink-0 rounded-full px-3 text-xs font-medium transition-colors ${
-                            tab === id ? "bg-[#1c8096] text-white" : "bg-gray-100 text-gray-600"
+                        className={`focus-ring h-8 shrink-0 rounded-full px-3 text-caption font-medium transition-colors duration-150 ${
+                            tab === id ? "bg-accent text-on-accent" : "bg-surface-sunken text-muted"
                         }`}
                     >
                         {label}
@@ -66,16 +66,16 @@ export function ElementsCarousel() {
                 {tab === "shapes" &&
                     SHAPES.map((shape) => (
                         <button key={shape.element} type="button" aria-label={`Add ${shape.label}`} onClick={() => addShape(shape.element)} className={card}>
-                            {shape.icon("#4b5563")}
+                            {shape.icon("currentColor")}
                         </button>
                     ))}
 
-                {tab !== "shapes" && library.status === "loading" && <p className="py-5 text-sm text-gray-500">Loading…</p>}
+                {tab !== "shapes" && library.status === "loading" && <p className="py-5 text-ui text-muted">Loading…</p>}
 
                 {tab !== "shapes" && library.status === "error" && (
-                    <p className="py-5 text-sm text-gray-600">
+                    <p className="py-5 text-ui text-muted">
                         Couldn&apos;t load illustrations.{" "}
-                        <button type="button" onClick={() => void load()} className="font-medium text-[#1c8096] underline">
+                        <button type="button" onClick={() => void load()} className="focus-ring rounded-[4px] font-semibold text-accent underline underline-offset-2">
                             Retry
                         </button>
                     </p>
@@ -96,7 +96,7 @@ export function ElementsCarousel() {
                 ))}
             </div>
 
-            {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+            {error && <p role="alert" className="text-caption text-danger">{error}</p>}
         </section>
     );
 }

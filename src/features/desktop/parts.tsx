@@ -1,88 +1,34 @@
 "use client";
 
-import type { ButtonHTMLAttributes, ReactNode } from "react";
-
+import { StatusPill, type Tone } from "@/components/ui/status";
 import { usePlotter } from "../plotter/PlotterContext";
 
-/** A sidebar section: a plain title (with optional trailing content) over its body. */
-export function Section({ title, aside, children }: { title: string; aside?: ReactNode; children: ReactNode }) {
+/** App mark: a single plotted stroke on the accent tile. */
+export function BrandMark({ className = "" }: { className?: string }) {
     return (
-        <section aria-label={title} className="border-b border-rule px-5 py-4">
-            <div className="mb-3 flex min-h-6 items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold text-ink">{title}</h2>
-                {aside}
-            </div>
-            {children}
-        </section>
+        <span aria-hidden className={`grid size-7 shrink-0 place-items-center rounded-[8px] bg-accent text-on-accent shadow-hairline ${className}`}>
+            <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 13.5c2.2-5.5 4.6-8 6-6.6 1.6 1.6-2.6 6.4-.8 7.6 1.6 1 4.2-3.2 5.6-2.4 1 .6.2 2.2 3.2 1.9" />
+            </svg>
+        </span>
     );
 }
-
-const focusRing = "outline-none focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-offset-1";
-
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { icon?: ReactNode };
-
-/** Teal, full-width main action. */
-export function PrimaryButton({ icon, children, className = "", ...props }: ButtonProps) {
-    return (
-        <button
-            type="button"
-            {...props}
-            className={`flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-teal text-[13px] font-medium text-white transition-colors hover:bg-teal-dark disabled:cursor-not-allowed disabled:bg-teal/40 ${focusRing} ${className}`}
-        >
-            {icon}
-            {children}
-        </button>
-    );
-}
-
-/** Outlined secondary action. */
-export function SecondaryButton({ icon, children, className = "", ...props }: ButtonProps) {
-    return (
-        <button
-            type="button"
-            {...props}
-            className={`flex h-9 items-center justify-center gap-2 rounded-lg border border-rule bg-white px-3 text-[13px] font-medium text-ink transition-colors hover:bg-desk disabled:cursor-not-allowed disabled:opacity-45 ${focusRing} ${className}`}
-        >
-            {icon}
-            {children}
-        </button>
-    );
-}
-
-/** Quiet text action. */
-export function QuietButton({ icon, children, className = "", ...props }: ButtonProps) {
-    return (
-        <button
-            type="button"
-            {...props}
-            className={`inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-graphite transition-colors hover:bg-desk hover:text-ink disabled:cursor-not-allowed disabled:opacity-45 ${focusRing} ${className}`}
-        >
-            {icon}
-            {children}
-        </button>
-    );
-}
-
-export { focusRing };
 
 /** Connection to the plotter, as a small tinted pill. */
 export function ConnectionChip() {
     const { link, gatewayConnected } = usePlotter();
 
-    const [label, tone] =
+    const [label, tone]: [string, Tone] =
         link !== "online"
-            ? [link === "connecting" ? "Connecting…" : "Reconnecting…", "bg-desk text-graphite before:bg-graphite"]
+            ? [link === "connecting" ? "Connecting…" : "Reconnecting…", "neutral"]
             : gatewayConnected
-              ? ["Connected", "bg-ok/10 text-ok before:bg-ok"]
-              : ["Plotter offline", "bg-fault/10 text-fault before:bg-fault"];
+              ? ["Connected", "ok"]
+              : ["Plotter offline", "danger"];
 
     return (
-        <span
-            role="status"
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium before:h-1.5 before:w-1.5 before:rounded-full before:content-[''] ${tone}`}
-        >
+        <StatusPill role="status" tone={tone} live={link !== "online"}>
             {label}
-        </span>
+        </StatusPill>
     );
 }
 
@@ -91,21 +37,21 @@ export function MachineStateChip() {
     const { telemetry, gatewayConnected } = usePlotter();
     const state = gatewayConnected ? telemetry?.state : undefined;
 
-    const [label, tone] = !state
-        ? ["No signal", "text-graphite before:bg-graphite/50"]
+    const [label, tone]: [string, Tone] = !state
+        ? ["No signal", "neutral"]
         : state === "Idle"
-          ? ["Idle", "text-ok before:bg-ok"]
+          ? ["Idle", "ok"]
           : state === "Run"
-            ? ["Running", "text-teal before:bg-teal"]
+            ? ["Running", "accent"]
             : state.startsWith("Hold")
-              ? ["On hold", "text-caution before:bg-caution"]
+              ? ["On hold", "warn"]
               : state === "Alarm"
-                ? ["Alarm", "text-fault before:bg-fault"]
-                : [state, "text-ink before:bg-graphite"];
+                ? ["Alarm", "danger"]
+                : [state, "neutral"];
 
     return (
-        <span className={`inline-flex items-center gap-1.5 text-xs font-medium before:h-1.5 before:w-1.5 before:rounded-full before:content-[''] ${tone}`}>
+        <StatusPill tone={tone} live={state === "Run"}>
             {label}
-        </span>
+        </StatusPill>
     );
 }

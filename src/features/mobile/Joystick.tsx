@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { X } from "@phosphor-icons/react";
 import type { Canvas as FabricCanvas, FabricObject, Point } from "fabric";
 
 import useCanvas, { type WorkspaceInstance } from "../workspace/canvas/CanvasContext";
@@ -285,8 +286,8 @@ export function Joystick() {
                     {GRID.map((sector) => (
                         <div
                             key={sector}
-                            className={`border border-dashed border-[#1c8096]/40 transition-colors ${
-                                sector === pointed ? "bg-[#1c8096]/25" : ""
+                            className={`border border-dashed border-accent/40 transition-colors duration-150 ${
+                                sector === pointed ? "bg-accent/20" : ""
                             }`}
                         />
                     ))}
@@ -299,23 +300,23 @@ export function Joystick() {
                         <motion.div
                             role="dialog"
                             aria-label="Move to sector"
-                            className="w-36 rounded-2xl bg-white p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.18)]"
+                            className="glass w-40 rounded-panel border border-line p-1.5 shadow-overlay"
                             initial={{ opacity: 0, x: 8, scale: 0.95 }}
                             animate={{ opacity: 1, x: 0, scale: 1 }}
                             exit={{ opacity: 0, x: 8, scale: 0.95 }}
                             transition={{ duration: 0.15 }}
                         >
                             <div className="flex items-center justify-between gap-1 pb-1 pl-1">
-                                <p className="truncate text-[11px] font-medium text-gray-500">
+                                <p className="truncate text-micro font-medium text-muted">
                                     {pointed ? SECTOR_LABELS[pointed] : "Pick a sector"}
                                 </p>
                                 <button
                                     type="button"
                                     aria-label="Cancel"
                                     onClick={() => setPickerOpen(false)}
-                                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-sm leading-none text-gray-400 active:bg-gray-100"
+                                    className="focus-ring grid size-7 shrink-0 place-items-center rounded-full text-muted active:bg-surface-pressed"
                                 >
-                                    ×
+                                    <X weight="bold" className="size-3.5" />
                                 </button>
                             </div>
                             <div className="grid grid-cols-3 gap-1">
@@ -325,8 +326,8 @@ export function Joystick() {
                                         type="button"
                                         aria-label={`Move to ${SECTOR_LABELS[sector].toLowerCase()}`}
                                         onClick={() => choose(sector)}
-                                        className={`h-6 rounded-md transition-colors ${
-                                            sector === pointed ? "bg-[#1c8096]" : "bg-gray-100 active:bg-gray-200"
+                                        className={`focus-ring h-8 rounded-[6px] transition-colors duration-150 ${
+                                            sector === pointed ? "bg-accent" : "bg-surface-sunken active:bg-surface-pressed"
                                         }`}
                                     />
                                 ))}
@@ -343,20 +344,20 @@ export function Joystick() {
                     onPointerMove={onPointerMove}
                     onPointerUp={onPointerUp}
                     onPointerCancel={onPointerUp}
-                    className={`relative flex h-24 w-24 touch-none select-none items-center justify-center rounded-full border shadow-lg backdrop-blur transition-opacity ${
-                        pickerOpen ? "border-[#1c8096] bg-white/90" : "border-white/70 bg-white/70"
+                    className={`glass relative flex size-24 touch-none select-none items-center justify-center rounded-full border shadow-overlay transition-opacity duration-200 ${
+                        pickerOpen ? "border-accent-line" : "border-line"
                     } ${hasSelection ? "opacity-100" : "opacity-40"}`}
                 >
                     {/* Direction ticks */}
                     {["top-1.5 left-1/2 -translate-x-1/2", "bottom-1.5 left-1/2 -translate-x-1/2", "left-1.5 top-1/2 -translate-y-1/2", "right-1.5 top-1/2 -translate-y-1/2"].map(
                         (position) => (
-                            <span key={position} aria-hidden className={`absolute h-1.5 w-1.5 rounded-full bg-gray-300 ${position}`} />
+                            <span key={position} aria-hidden className={`absolute size-1.5 rounded-full bg-line-strong ${position}`} />
                         ),
                     )}
                     <div
                         ref={knobRef}
                         aria-hidden
-                        className={`h-11 w-11 rounded-full shadow-md transition-[background-color] ${pickerOpen ? "bg-[#1c8096]" : "bg-gray-700"}`}
+                        className={`size-11 rounded-full shadow-raised transition-[background-color] duration-150 ${pickerOpen ? "bg-accent" : "bg-text"}`}
                     />
                 </div>
             </div>

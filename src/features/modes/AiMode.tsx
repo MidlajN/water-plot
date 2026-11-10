@@ -18,11 +18,11 @@ export function AiMode() {
 
     if (isMobile) {
         return (
-            <main aria-label="AI mode" className="h-[52dvh] overflow-y-auto bg-desk px-4 pb-8 pt-5">
+            <main aria-label="AI mode" className="h-[52dvh] overflow-y-auto overscroll-contain bg-surface-sunken px-4 pt-5 pb-8">
                 {idle ? (
                     <div className="flex h-full flex-col justify-center gap-2 pb-6 text-center">
-                        <h2 className="text-xl font-semibold text-ink">Create something beautiful.</h2>
-                        <p className="mx-auto max-w-xs text-sm leading-6 text-graphite">{INTRO}</p>
+                        <h2 className="text-title font-semibold tracking-[-0.01em] text-text">Create something beautiful</h2>
+                        <p className="mx-auto max-w-xs text-ui text-muted">{INTRO}</p>
                     </div>
                 ) : (
                     <AiResult compact />
@@ -32,11 +32,11 @@ export function AiMode() {
     }
 
     return (
-        <main aria-label="AI mode" className="h-full overflow-y-auto bg-desk">
-            <div className="mx-auto max-w-2xl space-y-7 px-8 py-16">
-                <header className="space-y-2">
-                    <h2 className="text-2xl font-semibold tracking-tight text-ink">Create something beautiful.</h2>
-                    <p className="max-w-xl text-[15px] leading-6 text-graphite">{INTRO}</p>
+        <main aria-label="AI mode" className="h-full overflow-y-auto overscroll-contain bg-surface-sunken">
+            <div className="mx-auto grid max-w-[680px] grid-cols-1 gap-8 px-8 pt-20 pb-16">
+                <header className="grid gap-2">
+                    <h2 className="text-display font-semibold tracking-[-0.025em] text-balance text-text">Create something beautiful</h2>
+                    <p className="max-w-[56ch] text-body text-muted">{INTRO}</p>
                 </header>
                 <AiComposer />
                 <AiResult />

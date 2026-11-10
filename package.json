@@ -15,6 +15,7 @@
     "gateway:mock": "node scripts/mock-gateway.mjs"
   },
   "dependencies": {
+    "@google/genai": "^3.0.0",
     "@phosphor-icons/react": "^2.1.10",
     "better-sqlite3": "^13.0.3",
     "class-variance-authority": "^0.7.1",

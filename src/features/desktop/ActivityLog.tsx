@@ -1,30 +1,28 @@
 "use client";
 
+import { StatusDot } from "@/components/ui/status";
+import { cn } from "@/lib/utils";
 import { formatClock } from "../plotter/format";
 import { usePlotter } from "../plotter/PlotterContext";
-
-const LEVEL_DOT = { info: "", warn: "bg-caution", error: "bg-fault" } as const;
 
 /** Recent plotter events since the page opened, newest first. */
 export function ActivityLog() {
     const { activity } = usePlotter();
 
     if (activity.length === 0) {
-        return <p className="text-xs text-graphite">Plotter events will show up here.</p>;
+        return <p className="text-caption text-muted">Plotter events will show up here.</p>;
     }
 
     return (
-        <ol className="max-h-64 space-y-1.5 overflow-y-auto pr-1" aria-live="polite">
+        <ol className="grid max-h-64 gap-2 overflow-y-auto overscroll-contain pr-1" aria-live="polite">
             {activity.map((entry) => (
-                <li key={entry.id} className="flex items-baseline gap-3 text-[13px] leading-5">
-                    <time dateTime={new Date(entry.at).toISOString()} className="shrink-0 font-mono text-[11px] tabular-nums text-graphite">
+                <li key={entry.id} className="grid grid-cols-[auto_1fr] items-baseline gap-3 text-ui">
+                    <time dateTime={new Date(entry.at).toISOString()} className="numeric text-micro text-subtle">
                         {formatClock(entry.at)}
                     </time>
-                    <span className={`min-w-0 ${entry.level === "error" ? "text-fault" : "text-ink"}`}>
-                        {LEVEL_DOT[entry.level] && (
-                            <span aria-hidden className={`mr-1.5 inline-block h-1.5 w-1.5 -translate-y-px rounded-full ${LEVEL_DOT[entry.level]}`} />
-                        )}
-                        {entry.text}
+                    <span className={cn("flex min-w-0 items-baseline gap-2", entry.level === "error" ? "text-danger" : "text-text")}>
+                        {entry.level !== "info" && <StatusDot tone={entry.level === "error" ? "danger" : "warn"} className="translate-y-[-1px] self-center" />}
+                        <span className="min-w-0">{entry.text}</span>
                     </span>
                 </li>
             ))}

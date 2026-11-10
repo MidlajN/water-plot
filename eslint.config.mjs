@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Pi bundle made by `pnpm build:pi`.
+    "dist/**",
+    // Agent skills (reference markdown and example snippets), not app code.
+    ".claude/**",
   ]),
 ]);
 

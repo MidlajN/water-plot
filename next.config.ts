@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
     "/api/illustrations": ["./src/features/illustrations/library/**/*"],
     "/api/illustrations/*": ["./src/features/illustrations/library/**/*"],
   },
+  // The database module's dynamic path makes Next trace the whole project; keep build
+  // output and agent skills out of the standalone bundle.
+  outputFileTracingExcludes: {
+    "/*": ["./dist/**/*", "./.claude/**/*"],
+  },
   turbopack: {
     rules: {
       "*.css": {

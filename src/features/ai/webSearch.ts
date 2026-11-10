@@ -1,7 +1,7 @@
 /**
- * Decides whether a request gets a web research step first (Groq's browser_search
- * tool). Plain creative requests
- * ("draw a flower", "a poem about rain") never are; requests that lean on real-world,
+ * Decides whether a request gets a web research step first (Google Search grounding
+ * with Gemini, browser_search with Groq). Plain creative requests ("draw a flower",
+ * "a poem about rain") never are; requests that lean on real-world,
  * current or factual information are.
  */
 

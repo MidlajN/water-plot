@@ -1,4 +1,4 @@
-import { util, Rect, iMatrix, Point, Canvas, ActiveSelection } from "fabric";
+import { util, Rect, iMatrix, Point, Canvas, ActiveSelection, FabricObject } from "fabric";
 import throttle from "lodash.throttle";
 import { SingleLineText } from "../../../text/SingleLineText";
 import { DEFAULT_FONT_ID, hasSingleLineFont } from "../../../text/fonts";
@@ -34,7 +34,10 @@ export class Workspace {
         this.undoStack = [];
         this.redoStack = [];
         this.isUndoRedo = false;
+        /** Colours from the design tokens (see canvas/theme.ts); set by applyTheme. */
+        this.theme = null;
         this.eventHandlers = {
+            drawDesk: this.drawDesk.bind(this),
             handleKeydown: this.handleKeydown.bind(this),
             highlightObj: this.hightlightObject.bind(this),
             saveState: this.saveState.bind(this),
@@ -47,6 +50,7 @@ export class Workspace {
         this.initWorkspace();
         this.initResizeObserver();
         this.initObjectBorder()
+        this.canvas.on('before:render', this.eventHandlers.drawDesk);
         this.lockViewport();
         this.bindHotKeys();
     }
@@ -149,6 +153,7 @@ export class Workspace {
                     this.workspace = obj;
                 }
             });
+            this.applyThemeToObjects();
             this.isUndoRedo = false;
             this.canvas.renderAll();
         });
@@ -192,10 +197,93 @@ export class Workspace {
             obj.setCoords();
         });
 
+        this.applyThemeToObjects();
         this.isUndoRedo = false;
         this.undoStack = [JSON.stringify(this.canvas)];
         this.redoStack = [];
         this.setZoomAuto();
+    }
+
+    /**
+     * Applies design-token colours: selection border and handles (new objects through
+     * Fabric's defaults, existing ones directly) and the sheet. The page's fill is display
+     * only: exports leave the workspace rect out.
+     */
+    applyTheme(theme) {
+        this.theme = theme;
+        Object.assign(FabricObject.ownDefaults, {
+            borderColor: theme.accent,
+            cornerColor: theme.handleFill,
+            cornerStrokeColor: theme.accent,
+        });
+        this.applyThemeToObjects();
+        this.canvas.requestRenderAll();
+    }
+
+    applyThemeToObjects() {
+        const theme = this.theme;
+        if (!theme) return;
+        this.canvas.getObjects().forEach((obj) => {
+            if (obj.name === 'workspace') {
+                obj.set({ fill: theme.paper });
+                return;
+            }
+            obj.set({ borderColor: theme.accent, cornerColor: theme.handleFill, cornerStrokeColor: theme.accent });
+        });
+    }
+
+    /**
+     * Desk decoration under the objects, drawn every frame on the cleared canvas (never
+     * an object, so it isn't saved, undone or exported): the sheet's soft shadow and
+     * registration marks at its corners.
+     */
+    drawDesk({ ctx }) {
+        const theme = this.theme;
+        const page = this.workspace;
+        if (!theme || !page || !ctx) return;
+
+        const vpt = this.canvas.viewportTransform;
+        const zoom = vpt[0];
+        const x = page.left * zoom + vpt[4];
+        const y = page.top * zoom + vpt[5];
+        const w = page.width * zoom;
+        const h = page.height * zoom;
+
+        ctx.save();
+        // Ambient shadow, then a tight contact shadow.
+        ctx.fillStyle = theme.paper;
+        ctx.shadowColor = theme.paperShadow;
+        ctx.shadowBlur = 28;
+        ctx.shadowOffsetY = 8;
+        ctx.fillRect(x, y, w, h);
+        ctx.shadowColor = theme.paperContact;
+        ctx.shadowBlur = 2;
+        ctx.shadowOffsetY = 1;
+        ctx.fillRect(x, y, w, h);
+        ctx.restore();
+
+        // Registration marks: short L-strokes just outside each corner.
+        const gap = 8;
+        const len = 12;
+        ctx.save();
+        ctx.strokeStyle = theme.mark;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (const [cx, cy, dx, dy] of [
+            [x, y, -1, -1],
+            [x + w, y, 1, -1],
+            [x, y + h, -1, 1],
+            [x + w, y + h, 1, 1],
+        ]) {
+            const px = Math.round(cx + dx * gap) + 0.5;
+            const py = Math.round(cy + dy * gap) + 0.5;
+            ctx.moveTo(px, py);
+            ctx.lineTo(px + dx * len, py);
+            ctx.moveTo(px, py);
+            ctx.lineTo(px, py + dy * len);
+        }
+        ctx.stroke();
+        ctx.restore();
     }
 
     hightlightObject() {
@@ -213,11 +301,7 @@ export class Workspace {
         }
 
         selectedObject.forEach(obj => {
-            if (outsideBox(obj)) {
-                obj.borderColor = '#FF8A8A'
-            } else {
-                obj.borderColor = '#43cad4'
-            }
+            obj.borderColor = outsideBox(obj) ? (this.theme?.warning ?? '#FF8A8A') : (this.theme?.accent ?? '#43cad4');
         });
         this.canvas.renderAll()
     }
@@ -376,6 +460,7 @@ export class Workspace {
         window.removeEventListener('keydown', this.eventHandlers.handleKeydown);
         this.container?.removeEventListener('wheel', this.eventHandlers.blockWheel);
 
+        this.canvas.off('before:render', this.eventHandlers.drawDesk);
         this.canvas.off('object:modified', this.eventHandlers.highlightObj);
         this.canvas.off('object:moving', this.eventHandlers.highlightObj);
         this.canvas.off('object:scaling', this.eventHandlers.highlightObj);

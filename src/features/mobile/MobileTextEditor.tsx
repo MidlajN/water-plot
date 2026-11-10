@@ -177,7 +177,7 @@ export function MobileTextEditor({
                 rows={2}
                 placeholder="Type your text…"
                 aria-label="Text to plot"
-                className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-base text-gray-900 outline-none focus:border-[#1c8096] focus:bg-white"
+                className="focus-ring w-full resize-none rounded-control border border-line bg-surface-sunken px-3 py-2 text-base text-text transition-[border-color,background-color] duration-150 focus:border-accent-line focus:bg-surface-raised"
             />
             <div className="flex items-center gap-2">
                 <FontOptions style={style} className="min-w-0 flex-1 overflow-x-auto" />

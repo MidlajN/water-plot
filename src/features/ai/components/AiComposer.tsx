@@ -1,9 +1,12 @@
 "use client";
 
 import { useRef, type KeyboardEvent } from "react";
-import { CircleNotch, Sparkle } from "@phosphor-icons/react";
+import { Sparkle } from "@phosphor-icons/react";
 
-import { focusRing } from "../../desktop/parts";
+import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
+import { Tooltip } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import { CATEGORY_CHOICES, EXAMPLE_PROMPTS, useAiStudio } from "../AiStudioContext";
 import { LIMITS } from "../constants";
 
@@ -16,6 +19,7 @@ export function AiComposer({ compact = false }: { compact?: boolean }) {
     const field = useRef<HTMLTextAreaElement>(null);
     const generating = busy;
     const tooShort = prompt.trim().length < LIMITS.promptMin;
+    const nearLimit = prompt.length > LIMITS.promptMax * 0.9;
 
     const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
         // ⌘/Ctrl+Enter generates; plain Enter adds a line.
@@ -31,85 +35,74 @@ export function AiComposer({ compact = false }: { compact?: boolean }) {
         field.current?.focus();
     };
 
+    const categories = (
+        <div role="radiogroup" aria-label="Kind of design" className="-mx-1 flex gap-1 overflow-x-auto px-1 [scrollbar-width:none]">
+            {CATEGORY_CHOICES.map(({ id, label }) => (
+                <Chip key={id} role="radio" size="sm" aria-checked={category === id} selected={category === id} disabled={generating} onClick={() => setCategory(id)}>
+                    {label}
+                </Chip>
+            ))}
+        </div>
+    );
+
     return (
         <form
             aria-label="Describe a design"
-            className={compact ? "space-y-2.5" : "space-y-3"}
+            className="grid grid-cols-1 gap-3"
             onSubmit={(event) => {
                 event.preventDefault();
                 void generate();
             }}
         >
-            <label className="block">
-                <span className="sr-only">Describe your idea</span>
-                <textarea
-                    ref={field}
-                    value={prompt}
-                    onChange={(event) => setPrompt(event.target.value.slice(0, LIMITS.promptMax))}
-                    onKeyDown={onKeyDown}
-                    rows={compact ? 2 : 3}
-                    maxLength={LIMITS.promptMax}
-                    disabled={generating}
-                    placeholder="A continuous-line drawing of a heron at dawn…"
-                    className={`w-full resize-none rounded-xl border border-rule bg-white px-3.5 py-3 text-ink placeholder:text-graphite/60 disabled:bg-desk/50 ${
-                        compact ? "text-base" : "text-[15px] leading-6"
-                    } ${focusRing}`}
-                />
-            </label>
-
-            <div className={`flex gap-2 ${compact ? "flex-col" : "items-center justify-between"}`}>
-                <div role="radiogroup" aria-label="Kind of design" className="-mx-0.5 flex gap-1 overflow-x-auto px-0.5 [scrollbar-width:none]">
-                    {CATEGORY_CHOICES.map(({ id, label }) => (
-                        <button
-                            key={id}
-                            type="button"
-                            role="radio"
-                            aria-checked={category === id}
-                            disabled={generating}
-                            onClick={() => setCategory(id)}
-                            className={`h-8 shrink-0 rounded-full px-3 text-[13px] transition-colors disabled:opacity-50 ${focusRing} ${
-                                category === id ? "bg-teal/10 font-medium text-teal" : "text-graphite hover:bg-desk hover:text-ink"
-                            }`}
-                        >
-                            {label}
-                        </button>
-                    ))}
-                </div>
-
-                <div className={`flex items-center gap-3 ${compact ? "justify-between" : ""}`}>
-                    <span className="font-mono text-[11px] tabular-nums text-graphite" aria-label="Characters used">
-                        {prompt.length}/{LIMITS.promptMax}
-                    </span>
-                    <button
-                        type="submit"
-                        disabled={generating || tooShort}
-                        className={`flex h-10 items-center justify-center gap-2 rounded-lg bg-teal px-4 text-[13px] font-medium text-white transition-colors hover:bg-teal-dark disabled:cursor-not-allowed disabled:bg-teal/40 ${
-                            compact ? "flex-1" : ""
-                        } ${focusRing}`}
-                    >
-                        {generating ? (
-                            <CircleNotch size={16} weight="bold" className="motion-safe:animate-spin" />
-                        ) : (
-                            <Sparkle size={16} weight="fill" />
+            <div
+                className={cn(
+                    "rounded-panel border border-line bg-surface-raised shadow-raised transition-[border-color,box-shadow] duration-150",
+                    "focus-within:border-accent-line focus-within:shadow-[var(--elev-raised),0_0_0_4px_color-mix(in_oklch,var(--accent)_14%,transparent)]",
+                    generating && "opacity-70",
+                )}
+            >
+                <label className="block">
+                    <span className="sr-only">Describe your idea</span>
+                    <textarea
+                        ref={field}
+                        value={prompt}
+                        onChange={(event) => setPrompt(event.target.value.slice(0, LIMITS.promptMax))}
+                        onKeyDown={onKeyDown}
+                        rows={compact ? 2 : 3}
+                        maxLength={LIMITS.promptMax}
+                        disabled={generating}
+                        placeholder="A continuous-line drawing of a heron at dawn…"
+                        className={cn(
+                            "block w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-text outline-none disabled:cursor-not-allowed",
+                            compact ? "text-base" : "text-body",
                         )}
-                        {generating ? "Creating…" : "Generate"}
-                    </button>
+                    />
+                </label>
+
+                <div className={cn("flex gap-2 px-3 pt-1 pb-3", compact ? "flex-col" : "items-center justify-between")}>
+                    {categories}
+                    <div className={cn("flex shrink-0 items-center gap-3", compact && "justify-between")}>
+                        <span className={cn("numeric text-micro", nearLimit ? "text-warn" : "text-subtle")} aria-label="Characters used">
+                            {prompt.length}/{LIMITS.promptMax}
+                        </span>
+                        <Tooltip label="Generate" shortcut="Ctrl/⌘ + Enter">
+                            <Button type="submit" variant="primary" busy={generating} disabled={tooShort} className={cn(compact && "flex-1")}>
+                                <Sparkle weight="fill" />
+                                Generate
+                            </Button>
+                        </Tooltip>
+                    </div>
                 </div>
             </div>
 
-            <div className={compact ? "space-y-1.5" : "flex flex-wrap items-center gap-1.5"}>
-                <span className="text-xs text-graphite">Try</span>
-                <ul className={`flex gap-1.5 ${compact ? "overflow-x-auto [scrollbar-width:none]" : "flex-wrap"}`}>
+            <div className={cn("flex gap-2", compact ? "flex-col" : "flex-wrap items-center")}>
+                <span className="text-caption text-subtle">Try</span>
+                <ul className={cn("flex gap-1.5", compact ? "-mx-1 overflow-x-auto px-1 [scrollbar-width:none]" : "flex-wrap")}>
                     {EXAMPLE_PROMPTS.map((example) => (
                         <li key={example.prompt} className="shrink-0">
-                            <button
-                                type="button"
-                                disabled={generating}
-                                onClick={() => applyExample(example)}
-                                className={`rounded-full border border-rule bg-white px-3 py-1 text-xs text-ink transition-colors hover:bg-desk disabled:opacity-50 ${focusRing}`}
-                            >
+                            <Chip size="sm" disabled={generating} onClick={() => applyExample(example)}>
                                 {example.prompt}
-                            </button>
+                            </Chip>
                         </li>
                     ))}
                 </ul>

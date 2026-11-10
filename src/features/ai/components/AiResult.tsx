@@ -1,9 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowClockwise, CircleNotch, X } from "@phosphor-icons/react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowClockwise, Question, Warning, X } from "@phosphor-icons/react";
 
-import { focusRing } from "../../desktop/parts";
+import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
+import { Card } from "@/components/ui/panel";
+import { Spinner } from "@/components/ui/spinner";
+import { RISE } from "@/lib/motion";
 import { useAiStudio, type StudioActivity } from "../AiStudioContext";
 import { DesignPreview } from "./DesignPreview";
 
@@ -18,19 +23,37 @@ const WORKING_LABEL = {
 
 /** What's happening now (progress, a question or an error) above the design preview. */
 export function AiResult({ compact = false }: { compact?: boolean }) {
-    const { activity } = useAiStudio();
+    const { activity, current } = useAiStudio();
 
     return (
-        <div className="space-y-4">
-            {activity.status === "working" && <Working activity={activity} />}
-            {activity.status === "error" && <ErrorNotice activity={activity} />}
-            {activity.status === "clarification" && <Clarification activity={activity} />}
+        <div className="grid grid-cols-1 gap-4">
+            <AnimatePresence mode="popLayout" initial={false}>
+                {activity.status === "working" && (
+                    <motion.div key="working" {...RISE}>
+                        <Working activity={activity} withSheet={!current} compact={compact} />
+                    </motion.div>
+                )}
+                {activity.status === "error" && (
+                    <motion.div key="error" {...RISE}>
+                        <ErrorNotice activity={activity} />
+                    </motion.div>
+                )}
+                {activity.status === "clarification" && (
+                    <motion.div key="clarification" {...RISE}>
+                        <Clarification activity={activity} />
+                    </motion.div>
+                )}
+            </AnimatePresence>
             <DesignPreview compact={compact} />
         </div>
     );
 }
 
-function Working({ activity }: { activity: Extract<StudioActivity, { status: "working" }> }) {
+/**
+ * Progress line, plus (for the first design) a shimmering blank sheet in the result's
+ * place, so the layout doesn't jump when the design arrives.
+ */
+function Working({ activity, withSheet, compact }: { activity: Extract<StudioActivity, { status: "working" }>; withSheet: boolean; compact: boolean }) {
     const { cancel } = useAiStudio();
     const [now, setNow] = useState(activity.startedAt);
 
@@ -39,21 +62,30 @@ function Working({ activity }: { activity: Extract<StudioActivity, { status: "wo
         return () => clearInterval(timer);
     }, []);
 
-    return (
-        <div role="status" aria-live="polite" className="flex items-start justify-between gap-4 text-sm text-graphite">
-            <p className="flex items-start gap-2.5">
-                <CircleNotch size={18} className="mt-0.5 shrink-0 text-teal motion-safe:animate-spin" />
+    const status = (
+        <div role="status" aria-live="polite" className="flex items-center justify-between gap-4">
+            <p className="flex items-center gap-2.5 text-ui text-text">
+                <Spinner className="text-accent" />
                 <span>
                     {WORKING_LABEL[activity.action]}
-                    {now - activity.startedAt > SLOW_AFTER_MS && (
-                        <span className="block text-xs">Designs that need research can take up to a minute.</span>
-                    )}
+                    {now - activity.startedAt > SLOW_AFTER_MS && <span className="block text-caption text-muted">Busy moments can take up to a minute or two.</span>}
                 </span>
             </p>
-            <button type="button" onClick={cancel} className={`shrink-0 rounded-md px-2 py-1 text-xs font-medium text-graphite hover:bg-desk hover:text-ink ${focusRing}`}>
+            <Button variant="ghost" size="sm" onClick={cancel}>
                 Cancel
-            </button>
+            </Button>
         </div>
+    );
+
+    if (!withSheet) return status;
+
+    return (
+        <Card className={compact ? "grid gap-3 p-3" : "grid gap-4 p-5"}>
+            {status}
+            <div className="rounded-control bg-surface-sunken p-3">
+                <div aria-hidden className="shimmer aspect-[690/290] w-full rounded-[2px] bg-paper/80 shadow-paper" />
+            </div>
+        </Card>
     );
 }
 
@@ -61,22 +93,18 @@ function ErrorNotice({ activity }: { activity: Extract<StudioActivity, { status:
     const { dismiss, retry } = useAiStudio();
 
     return (
-        <div role="alert" className="flex items-start justify-between gap-3 rounded-xl border border-fault/25 bg-fault/5 px-4 py-3">
-            <p className="text-sm leading-6 text-fault">{activity.message}</p>
-            <div className="flex shrink-0 items-center gap-1">
+        <div role="alert" className="flex items-start gap-3 rounded-panel bg-danger-soft px-4 py-3">
+            <Warning weight="fill" className="mt-0.5 size-4 shrink-0 text-danger" />
+            <p className="min-w-0 flex-1 text-ui text-danger">{activity.message}</p>
+            <div className="-my-1 flex shrink-0 items-center gap-1">
                 {activity.canRetry && (
-                    <button
-                        type="button"
-                        onClick={retry}
-                        className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-ink hover:bg-white ${focusRing}`}
-                    >
-                        <ArrowClockwise size={14} />
-                        Try again
-                    </button>
+                    <Button variant="ghost" size="sm" onClick={retry} className="text-text">
+                        <ArrowClockwise /> Try again
+                    </Button>
                 )}
-                <button type="button" aria-label="Dismiss" onClick={dismiss} className={`rounded-md p-1 text-graphite hover:bg-white ${focusRing}`}>
-                    <X size={14} />
-                </button>
+                <Button variant="ghost" size="icon-sm" aria-label="Dismiss" onClick={dismiss} className="text-danger">
+                    <X />
+                </Button>
             </div>
         </div>
     );
@@ -86,24 +114,23 @@ function Clarification({ activity }: { activity: Extract<StudioActivity, { statu
     const { generate } = useAiStudio();
 
     return (
-        <div aria-live="polite" className="space-y-3 rounded-xl border border-rule bg-white px-4 py-3.5">
-            <p className="text-sm leading-6 text-ink">{activity.question}</p>
+        <Card aria-live="polite" className="grid gap-3 px-4 py-4">
+            <p className="flex items-start gap-2.5 text-body text-text">
+                <Question weight="fill" className="mt-1 size-4 shrink-0 text-accent" />
+                {activity.question}
+            </p>
             {activity.suggestions.length > 0 && (
-                <ul className="flex flex-wrap gap-1.5">
+                <ul className="flex flex-wrap gap-1.5 pl-6.5">
                     {activity.suggestions.map((suggestion) => (
                         <li key={suggestion}>
-                            <button
-                                type="button"
-                                onClick={() => void generate(suggestion)}
-                                className={`rounded-full border border-rule px-3 py-1 text-xs text-ink transition-colors hover:bg-desk ${focusRing}`}
-                            >
+                            <Chip size="sm" onClick={() => void generate(suggestion)}>
                                 {suggestion}
-                            </button>
+                            </Chip>
                         </li>
                     ))}
                 </ul>
             )}
-            <p className="text-xs text-graphite">Pick one, or describe your idea in more detail.</p>
-        </div>
+            <p className="pl-6.5 text-caption text-muted">Pick one, or describe your idea in more detail.</p>
+        </Card>
     );
 }

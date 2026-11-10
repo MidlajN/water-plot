@@ -3,28 +3,30 @@
 import { useEffect, useState } from "react";
 import { Pause, Play, Stop, X } from "@phosphor-icons/react";
 
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { StatusDot, type Tone } from "@/components/ui/status";
+import { cn } from "@/lib/utils";
 import { usePlotter } from "./PlotterContext";
 
 import { formatDuration } from "./format";
-
-const ACCENT = "#1c8096";
 
 /** Plotter connection as a dot and a word. */
 export function PlotterStatus({ className = "" }: { className?: string }) {
     const { link, gatewayConnected, telemetry } = usePlotter();
 
-    const [color, label] =
+    const [tone, label]: [Tone, string] =
         link !== "online"
-            ? ["bg-gray-400", link === "connecting" ? "Connecting…" : "App offline"]
+            ? ["neutral", link === "connecting" ? "Connecting…" : "App offline"]
             : !gatewayConnected
-              ? ["bg-red-500", "Plotter offline"]
+              ? ["danger", "Plotter offline"]
               : telemetry?.state === "Alarm"
-                ? ["bg-amber-500", "Alarm"]
-                : ["bg-emerald-500", telemetry?.state ?? "Online"];
+                ? ["warn", "Alarm"]
+                : ["ok", telemetry?.state ?? "Online"];
 
     return (
-        <span className={`inline-flex items-center gap-1.5 text-xs text-gray-600 ${className}`}>
-            <span aria-hidden className={`h-2 w-2 rounded-full ${color}`} />
+        <span className={cn("inline-flex items-center gap-1.5 text-caption text-muted", className)}>
+            <StatusDot tone={tone} live={link !== "online"} />
             {label}
         </span>
     );
@@ -61,15 +63,15 @@ export function PlotterHud({
 
     const running = job.phase === "running";
     const percent = running ? (progress?.percent ?? 0) : (job.percent ?? (job.phase === "done" ? 100 : 0));
-    const title = running
+    const [title, tone]: [string, Tone] = running
         ? held
-            ? "Paused"
-            : "Plotting"
+            ? ["Paused", "warn"]
+            : ["Plotting", "accent"]
         : job.phase === "done"
-          ? "Plot finished"
+          ? ["Plot finished", "ok"]
           : job.phase === "aborted"
-            ? "Plot aborted"
-            : "Plot failed";
+            ? ["Plot aborted", "neutral"]
+            : ["Plot failed", "danger"];
 
     const onAbort = () => {
         if (!confirmAbort) {
@@ -81,30 +83,20 @@ export function PlotterHud({
     };
 
     return (
-        <section aria-label="Plot progress" className={`space-y-2 ${className}`}>
+        <section aria-label="Plot progress" className={cn("grid grid-cols-1 gap-2.5", className)}>
             <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-gray-800">{title}</span>
-                    {showStatus && <PlotterStatus />}
+                    <StatusDot tone={tone} live={running && !held} />
+                    <span className="text-ui font-semibold text-text">{title}</span>
+                    {showStatus && <PlotterStatus className="ml-1" />}
                 </div>
-                <span className="font-mono text-sm font-medium tabular-nums text-gray-700">{percent.toFixed(0)}%</span>
+                <span className="numeric text-ui font-medium text-text">{percent.toFixed(0)}%</span>
             </div>
 
-            <div
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={Math.round(percent)}
-                className="h-2 overflow-hidden rounded-full bg-gray-100"
-            >
-                <div
-                    className="h-full rounded-full transition-[width] duration-300"
-                    style={{ width: `${percent}%`, background: job.phase === "failed" ? "#dc2626" : ACCENT }}
-                />
-            </div>
+            <Progress value={percent} tone={job.phase === "failed" ? "danger" : held ? "warn" : "accent"} label="Plot progress" />
 
-            <div className="flex items-center justify-between font-mono text-xs tabular-nums text-gray-500">
-                <span>
+            <div className="flex items-center justify-between text-caption text-muted">
+                <span className="numeric">
                     {running && progress
                         ? `Line ${progress.current_line.toLocaleString()} / ${progress.total_lines.toLocaleString()}`
                         : job.result
@@ -113,51 +105,37 @@ export function PlotterHud({
                             ? "Starting…"
                             : ""}
                 </span>
-                {running && progress && <span>{formatDuration(progress.estimated_remaining_seconds)} left</span>}
+                {running && progress && <span className="numeric">{formatDuration(progress.estimated_remaining_seconds)} left</span>}
             </div>
 
             {showPosition && telemetry && (
-                <dl aria-label="Position" className="grid grid-cols-3 gap-1 rounded-lg bg-gray-50 px-2 py-1.5 text-xs tabular-nums">
+                <dl aria-label="Position" className="grid grid-cols-3 gap-1 rounded-control bg-surface-sunken px-3 py-2 text-caption">
                     {(["X", "Y", "Z"] as const).map((axis, index) => (
-                        <div key={axis} className="flex gap-1">
-                            <dt className="font-medium text-gray-500">{axis}</dt>
-                            <dd className="text-gray-800">{telemetry.mpos[index].toFixed(2)}</dd>
+                        <div key={axis} className="flex gap-1.5">
+                            <dt className="font-semibold text-subtle">{axis}</dt>
+                            <dd className="numeric text-text">{telemetry.mpos[index].toFixed(2)}</dd>
                         </div>
                     ))}
                 </dl>
             )}
 
-            <div className="flex gap-2">
+            <div className="mt-0.5 flex gap-2">
                 {running ? (
                     <>
-                        <button
-                            type="button"
-                            onClick={() => void (held ? resume() : hold())}
-                            className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 active:bg-gray-100"
-                        >
-                            {held ? <Play size={16} weight="fill" /> : <Pause size={16} weight="fill" />}
+                        <Button className="flex-1" onClick={() => void (held ? resume() : hold())}>
+                            {held ? <Play weight="fill" /> : <Pause weight="fill" />}
                             {held ? "Resume" : "Pause"}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onAbort}
-                            className={`flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg text-sm font-medium transition-colors ${
-                                confirmAbort ? "bg-red-600 text-white" : "border border-red-200 text-red-600 active:bg-red-50"
-                            }`}
-                        >
-                            <Stop size={16} weight="fill" />
+                        </Button>
+                        <Button className="flex-1" variant={confirmAbort ? "danger-solid" : "danger"} onClick={onAbort} aria-live="polite">
+                            <Stop weight="fill" />
                             {confirmAbort ? "Tap to abort" : "Abort"}
-                        </button>
+                        </Button>
                     </>
                 ) : (
-                    <button
-                        type="button"
-                        onClick={dismiss}
-                        className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 active:bg-gray-100"
-                    >
-                        <X size={16} />
+                    <Button className="flex-1" onClick={dismiss}>
+                        <X />
                         Dismiss
-                    </button>
+                    </Button>
                 )}
             </div>
         </section>
