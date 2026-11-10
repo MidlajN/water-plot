@@ -1,0 +1,20 @@
+# Plotter Studio Auto mode worker (scheduler and plot sender). Installed by install.sh,
+# which fills in @USER@, @APP_DIR@ and @NODE@.
+[Unit]
+Description=Plotter Studio Auto mode worker
+Wants=network-online.target plotter-studio-web.service
+# The web service runs the database migrations first.
+After=network-online.target plotter-studio-web.service
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=@APP_DIR@
+Environment=NODE_ENV=production
+EnvironmentFile=@APP_DIR@/.env
+ExecStart=@NODE@ worker.cjs
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

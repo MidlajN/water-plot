@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // A self-contained server in .next/standalone (no node_modules install needed), used
+  // for running on the Raspberry Pi. See scripts/build-pi.sh.
+  output: "standalone",
   cacheComponents: true,
   partialPrefetching: true,
   // The illustration API reads these files at runtime; make sure production builds ship them.

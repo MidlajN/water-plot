@@ -285,6 +285,11 @@ With Auto selected and `pnpm worker` running, each minute the worker:
    minute later;
 4. marks the job **Plotted** or **Failed** when the gateway reports the job finished.
 
+Only the newest 100 Auto jobs are kept. After each minute the worker deletes older
+jobs and their SVG files, so the database and `data/plots` stay small. Plots you send
+yourself from Edit mode aren't recorded here. If the worker stops between creating a
+job and sending it, the job is marked **Skipped** the next time the worker starts.
+
 ---
 
 ## AI Creative Studio
@@ -339,6 +344,98 @@ curl -X POST -H 'Content-Type: image/svg+xml' --data-binary @drawing.svg \
 
 ## Running it permanently
 
+### On the Raspberry Pi (recommended)
+
+Plotter Studio and the gateway can share one Pi. The app reaches the gateway over
+`127.0.0.1`, so the plotter link no longer depends on Wi-Fi; only phones and laptops
+use the network.
+
+```
+Phone/laptop ──Wi-Fi──▶ Pi :3000  Plotter Studio (web app + Auto worker)
+                                     │ 127.0.0.1:8080
+                                     ▼
+                                   gateway ──USB──▶ plotter
+```
+
+**You need:** a Pi 4 or 5 with 2 GB of RAM or more, 64-bit Raspberry Pi OS, Node.js 22
+or newer on the Pi, and internet access for AI mode.
+
+**1. Build the bundle.** On your computer (or on the Pi itself, which is slower):
+
+```bash
+pnpm build:pi
+```
+
+This makes `dist/plotter-studio-pi/`, about 60 MB: the Next.js standalone server, the
+bundled Auto worker, the database migrations, the systemd services and `install.sh`.
+No `node_modules` install is needed on the Pi. The database driver's 64-bit Linux
+binary is included; on 32-bit Raspberry Pi OS the installer builds it on the Pi
+(this needs `sudo apt install build-essential python3`).
+
+**2. Copy it to the Pi** (replace `pi@plotter-pi.local` with your user and host):
+
+```bash
+rsync -a --delete dist/plotter-studio-pi/ pi@plotter-pi.local:plotter-studio-pi/
+```
+
+**3. Install it** on the Pi:
+
+```bash
+cd ~/plotter-studio-pi && sudo ./install.sh
+```
+
+The installer copies the app to `/opt/plotter-studio` and adds two services that start
+on boot and restart after a crash:
+
+- `plotter-studio-web`, the web app on port 3000. It applies database migrations
+  before each start.
+- `plotter-studio-worker`, the Auto mode worker.
+
+The first install creates `/opt/plotter-studio/.env` from the example and stops so you
+can fill it in. Set at least these:
+
+```bash
+GATEWAY_URL=http://127.0.0.1:8080
+GROQ_API_KEY=gsk_…
+```
+
+Then start the services:
+
+```bash
+sudo systemctl start plotter-studio-web plotter-studio-worker
+```
+
+Open `http://<pi-name>.local:3000` from a phone or laptop.
+
+**Updating:** build and copy a new bundle, then run `sudo ./install.sh` again. The
+installer keeps `.env` and the `data/` folder (plot history, Auto settings and
+generated plots).
+
+**Options:** `sudo APP_DIR=/srv/plotter ./install.sh` installs somewhere else, and
+`sudo PLOTTER_USER=name ./install.sh` picks the user the services run as. By default
+that is the user who ran `sudo`.
+
+**Logs and control:**
+
+```bash
+journalctl -u plotter-studio-web -u plotter-studio-worker -f
+```
+
+```bash
+sudo systemctl restart plotter-studio-web plotter-studio-worker
+```
+
+**Lock down the gateway.** The app sends commands to the gateway without credentials,
+so anything that can reach port 8080 can move the plotter. When both run on one Pi,
+make the gateway listen on `127.0.0.1` only. Browsers then reach the plotter only
+through Plotter Studio, which checks what it sends. The gateway runs as its own
+service, set up with the gateway's own instructions; Plotter Studio reconnects on its
+own if the gateway starts later or restarts.
+
+**Back up** `/opt/plotter-studio/data/plotter.db` now and then. SD cards wear out.
+
+### On another computer
+
 Build and start the app:
 
 ```bash
@@ -349,10 +446,13 @@ pnpm build
 pnpm start
 ```
 
+`pnpm start` prints a warning suggesting `node .next/standalone/server.js`, because the
+build also makes the standalone server for the Pi. It works as before and can be
+ignored.
+
 Run `pnpm worker` alongside it, under a process manager such as systemd or pm2, so it
 restarts after a crash or reboot. Run both from the project folder: the database and
-`data/plots` paths are relative to it. The app can run on the Pi itself; in that case,
-set `GATEWAY_URL=http://localhost:8080`.
+`data/plots` paths are relative to it.
 
 ## Troubleshooting
 
@@ -388,7 +488,8 @@ src/features/workspace/ Canvas editor and single-line text
 src/features/auto/      Auto mode settings and job history
 src/lib/db/             SQLite schema and connection (Drizzle)
 worker/                 Auto mode scheduler and plot sender
-scripts/                Mock gateway, font build tools
+scripts/                Mock gateway, font build tools, Pi bundle build, migrations
+deploy/pi/              systemd services and install.sh for the Raspberry Pi
 drizzle/                Database migrations
 ```
 

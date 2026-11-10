@@ -5,6 +5,7 @@ import { getAutoSettings } from "../src/features/auto/settings";
 import { getRandomQuote } from "./quotes";
 import { generatePlotSvg } from "./generatePlot";
 import { sendPlotJob } from "./plotterSender";
+import { pruneOldJobs, skipInterruptedJobs } from "./retention";
 
 const MINUTE = 60_000;
 const TIMEZONE = "Asia/Kolkata";
@@ -81,8 +82,23 @@ async function createPlotJob() {
   }
 }
 
+function tidyUp() {
+  try {
+    pruneOldJobs();
+  } catch (error) {
+    console.error("[Auto] Pruning old jobs failed:", error);
+  }
+}
+
 export async function startScheduler() {
   console.log("[Auto] Scheduler started.");
+
+  try {
+    skipInterruptedJobs();
+  } catch (error) {
+    console.error("[Auto] Checking interrupted jobs failed:", error);
+  }
+  tidyUp();
 
   while (true) {
     await waitForNextMinute();
@@ -92,5 +108,6 @@ export async function startScheduler() {
     } catch (error) {
       console.error("[Auto] Scheduler error:", error);
     }
+    tidyUp();
   }
 }
