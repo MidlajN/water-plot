@@ -43,7 +43,7 @@ export function ModeTabBar({ docked = false }: { docked?: boolean }) {
                                 <motion.span
                                     layoutId="mode-tab-highlight"
                                     aria-hidden
-                                    className="absolute inset-0 rounded-full bg-black/[0.06]"
+                                    className="absolute inset-0 rounded-full bg-ink/[0.06]"
                                     transition={reduceMotion ? { duration: 0 } : { type: "spring", bounce: 0, duration: 0.35 }}
                                 />
                             )}

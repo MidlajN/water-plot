@@ -101,7 +101,7 @@ export function PlotCarousel() {
             <section aria-labelledby="recent-plots-title">
                 <Header />
                 <div className="px-5 md:px-8">
-                    <div className="flex aspect-[690/290] flex-col items-center justify-center gap-1 rounded-xl bg-white/70 px-6 text-center shadow-[inset_0_0_0_1px_var(--color-separator)]">
+                    <div className="flex aspect-[690/290] flex-col items-center justify-center gap-1 rounded-xl bg-surface-raised/70 px-6 text-center shadow-[inset_0_0_0_1px_var(--color-separator)]">
                         {auto.status === "error" ? (
                             <>
                                 <p className="type-headline text-ink">Couldn’t load recent plots</p>
@@ -225,7 +225,7 @@ function Slide({ job, position, current, animateIn }: { job: PlotJobSummary; pos
             className="w-full shrink-0 snap-center"
         >
             <div
-                className={`aspect-[690/290] overflow-hidden rounded-xl bg-white shadow-[0_0_0_0.5px_rgb(0_0_0/0.05),0_1px_2px_rgb(31_39_51/0.06),0_10px_28px_rgb(31_39_51/0.09)] transition-opacity duration-300 ${
+                className={`aspect-[690/290] overflow-hidden rounded-xl bg-paper shadow-paper transition-opacity duration-300 ${
                     current ? "opacity-100" : "opacity-55"
                 }`}
             >

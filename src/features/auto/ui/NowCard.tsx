@@ -167,7 +167,7 @@ export function NowCard() {
     })();
 
     return (
-        <section aria-label="Now" className="relative overflow-hidden rounded-[1.25rem] bg-white px-5 pb-5 pt-4">
+        <section aria-label="Now" className="relative overflow-hidden rounded-[1.25rem] bg-surface-raised px-5 pb-5 pt-4">
             {/* Announce state changes only; the countdown ticks every second and would be noise. */}
             <p className="sr-only" aria-live="polite">
                 {state.eyebrow}

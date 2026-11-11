@@ -108,7 +108,7 @@ export function ElementsMenu() {
                                             title={shape.label}
                                             onClick={() => pickShape(shape.element)}
                                             className={`press flex h-12 items-center justify-center rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-teal ${
-                                                selected ? "bg-teal/12" : "hover:bg-black/[0.05]"
+                                                selected ? "bg-teal/12" : "hover:bg-ink/[0.05]"
                                             }`}
                                         >
                                             {shape.icon(selected ? ACTIVE_COLOR : IDLE_COLOR)}
@@ -145,7 +145,7 @@ export function ElementsMenu() {
                                                     title={item.name}
                                                     disabled={inserting !== null}
                                                     onClick={() => void insertIllustration(item)}
-                                                    className="press flex h-14 items-center justify-center rounded-xl p-1 outline-none hover:bg-black/[0.05] focus-visible:ring-2 focus-visible:ring-teal disabled:opacity-50"
+                                                    className="press flex h-14 items-center justify-center rounded-xl p-1 outline-none hover:bg-ink/[0.05] focus-visible:ring-2 focus-visible:ring-teal disabled:opacity-50"
                                                 >
                                                     {/* eslint-disable-next-line @next/next/no-img-element -- small SVG thumbnails from our own API */}
                                                     <img src={illustrationUrl(item.id)} alt="" className="h-11 w-11 object-contain" />

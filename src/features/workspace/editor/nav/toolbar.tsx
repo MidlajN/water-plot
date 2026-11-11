@@ -4,13 +4,14 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 
-export const ACTIVE_COLOR = "#1c8096";
-export const IDLE_COLOR = "#3a4250";
+/** Tool icons draw in the button's text colour, so they follow the theme. */
+export const ACTIVE_COLOR = "currentColor";
+export const IDLE_COLOR = "currentColor";
 
 /** Classes shared by every tool rail button. */
 export const toolButtonClass = (active: boolean, open = false) =>
-    `press relative flex h-10 w-10 items-center justify-center rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-teal ${
-        active ? "" : open ? "bg-black/[0.06]" : "hover:bg-black/[0.05]"
+    `press relative flex h-10 w-10 items-center justify-center rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+        active ? "text-accent" : open ? "bg-ink/[0.06] text-ink" : "text-ink hover:bg-ink/[0.05]"
     }`;
 
 /** The selected tool's tint; glides between tools on a critically damped spring. */
@@ -32,7 +33,7 @@ export function ToolTooltip({ label, hidden = false }: { label: string; hidden?:
     return (
         <div
             aria-hidden
-            className="type-caption pointer-events-none absolute left-full top-1/2 z-10 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-ink/90 px-2.5 py-1 font-semibold text-white opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100 group-hover:delay-300"
+            className="type-caption pointer-events-none absolute left-full top-1/2 z-10 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-ink/90 px-2.5 py-1 font-semibold text-bg opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100 group-hover:delay-300"
         >
             {label}
         </div>

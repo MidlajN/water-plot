@@ -13,7 +13,8 @@ const fail = (error: string, status: number) => NextResponse.json({ status: "err
  *
  * Body (JSON): { mode: "generate" | "refine", prompt, category?, refinement?, previous? }.
  * Returns a validated, plotter-safe design, a clarification question, or an error.
- * Calls Groq on the server; the API key never reaches the browser.
+ * Calls the configured AI provider (Gemini or Groq) on the server; the API key never
+ * reaches the browser.
  */
 export async function POST(request: Request) {
     await connection();

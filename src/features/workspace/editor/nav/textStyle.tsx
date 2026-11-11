@@ -145,7 +145,7 @@ export function FontOptions({ style, className = "" }: { style: TextStyle; class
                         onMouseDown={keepFocus}
                         onClick={() => style.applyFont(id)}
                         className={`press flex h-10 shrink-0 items-center rounded-xl px-3 outline-none focus-visible:ring-2 focus-visible:ring-teal ${
-                            isSelected ? "bg-teal/12 text-teal" : "text-ink/75 hover:bg-black/[0.05]"
+                            isSelected ? "bg-teal/12 text-teal" : "text-ink/75 hover:bg-ink/[0.05]"
                         }`}
                     >
                         <svg
@@ -194,7 +194,7 @@ export function FontSizeControl({ style, className = "" }: { style: TextStyle; c
     };
 
     const stepButton =
-        "press flex h-9 w-9 items-center justify-center rounded-full text-ink/75 outline-none hover:bg-black/[0.05] focus-visible:ring-2 focus-visible:ring-teal disabled:opacity-35";
+        "press flex h-9 w-9 items-center justify-center rounded-full text-ink/75 outline-none hover:bg-ink/[0.05] focus-visible:ring-2 focus-visible:ring-teal disabled:opacity-35";
 
     return (
         <div role="group" aria-label="Font size" className={`flex items-center ${className}`}>
@@ -209,7 +209,7 @@ export function FontSizeControl({ style, className = "" }: { style: TextStyle; c
             >
                 <Minus size={14} weight="bold" />
             </button>
-            <label className="type-footnote flex h-9 items-center gap-1 rounded-lg px-1.5 text-graphite focus-within:bg-black/[0.05]">
+            <label className="type-footnote flex h-9 items-center gap-1 rounded-lg px-1.5 text-graphite focus-within:bg-ink/[0.05]">
                 <input
                     type="number"
                     inputMode="decimal"

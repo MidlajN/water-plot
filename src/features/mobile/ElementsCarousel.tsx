@@ -19,7 +19,7 @@ type Tab = "shapes" | IllustrationCategory;
 const TABS: { id: Tab; label: string }[] = [{ id: "shapes", label: "Shapes" }, ...ILLUSTRATION_CATEGORIES];
 
 const card =
-    "press flex h-16 w-16 shrink-0 snap-start items-center justify-center rounded-2xl bg-grouped outline-none active:bg-black/[0.08] focus-visible:ring-2 focus-visible:ring-teal disabled:opacity-50";
+    "press flex h-16 w-16 shrink-0 snap-start items-center justify-center rounded-2xl bg-grouped text-ink outline-none active:bg-ink/[0.08] focus-visible:ring-2 focus-visible:ring-teal disabled:opacity-50";
 
 /**
  * Mobile Elements picker: category chips over a sideways-scrolling strip of shapes or
@@ -54,7 +54,7 @@ export function ElementsCarousel() {
                         aria-selected={tab === id}
                         onClick={() => setTab(id)}
                         className={`press type-footnote h-8 shrink-0 rounded-full px-3.5 font-semibold outline-none focus-visible:ring-2 focus-visible:ring-teal ${
-                            tab === id ? "bg-teal text-white" : "bg-grouped text-ink/75"
+                            tab === id ? "bg-teal text-on-accent" : "bg-grouped text-ink/75"
                         }`}
                     >
                         {label}
@@ -66,7 +66,7 @@ export function ElementsCarousel() {
                 {tab === "shapes" &&
                     SHAPES.map((shape) => (
                         <button key={shape.element} type="button" aria-label={`Add ${shape.label}`} onClick={() => addShape(shape.element)} className={card}>
-                            {shape.icon("#3a4250")}
+                            {shape.icon("currentColor")}
                         </button>
                     ))}
 

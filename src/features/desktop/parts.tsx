@@ -38,7 +38,7 @@ export function Section({
                             aria-expanded={open}
                             aria-controls={bodyId}
                             onClick={() => setOpen((current) => !current)}
-                            className={`-ml-1.5 flex items-center gap-1.5 rounded-md px-1.5 py-0.5 transition-colors hover:bg-black/[0.05] ${focusRing}`}
+                            className={`-ml-1.5 flex items-center gap-1.5 rounded-md px-1.5 py-0.5 transition-colors hover:bg-ink/[0.05] ${focusRing}`}
                         >
                             <CaretRight
                                 size={12}
@@ -72,7 +72,7 @@ export function PrimaryButton({ icon, children, className = "", ...props }: Butt
         <button
             type="button"
             {...props}
-            className={`press type-body flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-teal font-semibold text-white hover:bg-teal-dark disabled:cursor-not-allowed disabled:bg-teal/35 ${focusRing} ${className}`}
+            className={`press type-body flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-teal font-semibold text-on-accent hover:bg-teal-dark disabled:cursor-not-allowed disabled:bg-teal/35 ${focusRing} ${className}`}
         >
             {icon}
             {children}
@@ -86,7 +86,7 @@ export function SecondaryButton({ icon, children, className = "", ...props }: Bu
         <button
             type="button"
             {...props}
-            className={`press type-footnote flex h-10 items-center justify-center gap-2 rounded-xl bg-black/[0.055] px-3.5 font-semibold text-ink hover:bg-black/[0.08] disabled:cursor-not-allowed disabled:opacity-40 ${focusRing} ${className}`}
+            className={`press type-footnote flex h-10 items-center justify-center gap-2 rounded-xl bg-ink/[0.055] px-3.5 font-semibold text-ink hover:bg-ink/[0.08] disabled:cursor-not-allowed disabled:opacity-40 ${focusRing} ${className}`}
         >
             {icon}
             {children}
@@ -133,7 +133,7 @@ export function Segmented<T extends string | number>({
     const reduceMotion = useReducedMotion();
 
     return (
-        <div role={kind === "tab" ? "tablist" : "radiogroup"} aria-label={label} className={`flex rounded-[0.625rem] bg-black/[0.055] p-0.5 ${className}`}>
+        <div role={kind === "tab" ? "tablist" : "radiogroup"} aria-label={label} className={`flex rounded-[0.625rem] bg-ink/[0.055] p-0.5 ${className}`}>
             {options.map((option) => {
                 const selected = option.value === value;
                 return (
@@ -153,7 +153,7 @@ export function Segmented<T extends string | number>({
                             <motion.span
                                 layoutId={`segment-${id}`}
                                 aria-hidden
-                                className="absolute inset-0 rounded-lg bg-white shadow-[0_0_0_0.5px_rgb(0_0_0/0.05),0_1px_3px_rgb(0_0_0/0.1)]"
+                                className="absolute inset-0 rounded-lg bg-surface-raised shadow-hairline"
                                 transition={reduceMotion ? { duration: 0 } : { type: "spring", bounce: 0, duration: 0.3 }}
                             />
                         )}
@@ -171,7 +171,7 @@ export function ConnectionChip() {
 
     const [label, tone] =
         link !== "online"
-            ? [link === "connecting" ? "Connecting…" : "Reconnecting…", "bg-black/[0.06] text-graphite before:bg-graphite"]
+            ? [link === "connecting" ? "Connecting…" : "Reconnecting…", "bg-ink/[0.06] text-graphite before:bg-graphite"]
             : gatewayConnected
               ? ["Connected", "bg-ok/12 text-ok before:bg-ok"]
               : ["Plotter offline", "bg-fault/12 text-fault before:bg-fault"];
@@ -206,6 +206,17 @@ export function MachineStateChip() {
     return (
         <span className={`type-caption inline-flex items-center gap-1.5 font-semibold before:h-1.5 before:w-1.5 before:rounded-full before:content-[''] ${tone}`}>
             {label}
+        </span>
+    );
+}
+
+/** The app's mark: a single pen stroke on an accent tile. */
+export function BrandMark({ className = "" }: { className?: string }) {
+    return (
+        <span aria-hidden className={`grid size-7 shrink-0 place-items-center rounded-[8px] bg-accent text-on-accent shadow-hairline ${className}`}>
+            <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 13.5c2.2-5.5 4.6-8 6-6.6 1.6 1.6-2.6 6.4-.8 7.6 1.6 1 4.2-3.2 5.6-2.4 1 .6.2 2.2 3.2 1.9" />
+            </svg>
         </span>
     );
 }

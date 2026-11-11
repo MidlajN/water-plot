@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { ConnectionChip } from "../desktop/parts";
+import { ThemeToggle } from "../theme/ThemeToggle";
 import { AutoModeError } from "./ModeSwitcher";
 import { ModeTabBar } from "./ModeTabBar";
 
@@ -42,7 +43,8 @@ export function PhoneScreen({ title, label, children }: { title: string; label: 
                     >
                         {title}
                     </span>
-                    <span className="relative">
+                    <span className="relative flex items-center gap-1">
+                        <ThemeToggle />
                         <ConnectionChip />
                     </span>
                 </div>

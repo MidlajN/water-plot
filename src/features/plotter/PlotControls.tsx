@@ -48,7 +48,7 @@ export function PlotControls({
                 type="button"
                 disabled={!active}
                 onClick={() => void (held ? onResume() : onHold())}
-                className={`press flex flex-1 items-center justify-center gap-2 bg-black/[0.055] font-semibold text-ink outline-none hover:bg-black/[0.08] focus-visible:ring-2 focus-visible:ring-teal ${height}`}
+                className={`press flex flex-1 items-center justify-center gap-2 bg-ink/[0.055] font-semibold text-ink outline-none hover:bg-ink/[0.08] focus-visible:ring-2 focus-visible:ring-teal ${height}`}
             >
                 {held ? <Play size={iconSize} weight="fill" /> : <Pause size={iconSize} weight="fill" />}
                 {held ? "Resume" : "Pause"}
@@ -58,7 +58,7 @@ export function PlotControls({
                 disabled={!active}
                 onClick={stop}
                 className={`press flex flex-1 items-center justify-center gap-2 font-semibold outline-none focus-visible:ring-2 focus-visible:ring-fault ${height} ${
-                    confirmStop ? "bg-fault text-white" : "bg-fault/10 text-fault hover:bg-fault/15"
+                    confirmStop ? "bg-fault text-on-accent" : "bg-fault/10 text-fault hover:bg-fault/15"
                 }`}
             >
                 <Stop size={iconSize} weight="fill" />

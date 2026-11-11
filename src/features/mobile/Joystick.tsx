@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { X } from "@phosphor-icons/react";
 import type { Canvas as FabricCanvas, FabricObject, Point } from "fabric";
 
 import useCanvas, { type WorkspaceInstance } from "../workspace/canvas/CanvasContext";
@@ -297,7 +298,7 @@ export function Joystick() {
                         <motion.div
                             role="dialog"
                             aria-label="Move to sector"
-                            className="material-float w-36 origin-right rounded-2xl p-1.5"
+                            className="material-float w-40 origin-right rounded-2xl p-1.5"
                             initial={{ opacity: 0, x: 8, scale: 0.95 }}
                             animate={{ opacity: 1, x: 0, scale: 1 }}
                             exit={{ opacity: 0, x: 8, scale: 0.95 }}
@@ -311,9 +312,9 @@ export function Joystick() {
                                     type="button"
                                     aria-label="Cancel"
                                     onClick={() => setPickerOpen(false)}
-                                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-base leading-none text-graphite active:bg-black/[0.06]"
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-graphite outline-none active:bg-ink/[0.06] focus-visible:ring-2 focus-visible:ring-focus"
                                 >
-                                    ×
+                                    <X size={14} weight="bold" />
                                 </button>
                             </div>
                             <div className="grid grid-cols-3 gap-1">
@@ -323,7 +324,7 @@ export function Joystick() {
                                         type="button"
                                         aria-label={`Move to ${SECTOR_LABELS[sector].toLowerCase()}`}
                                         onClick={() => choose(sector)}
-                                        className={`h-6 rounded-md transition-colors ${sector === pointed ? "bg-teal" : "bg-black/[0.06] active:bg-black/[0.1]"}`}
+                                        className={`h-8 rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus ${sector === pointed ? "bg-teal" : "bg-ink/[0.06] active:bg-ink/[0.1]"}`}
                                     />
                                 ))}
                             </div>
@@ -346,7 +347,7 @@ export function Joystick() {
                     {/* Direction ticks */}
                     {["top-1.5 left-1/2 -translate-x-1/2", "bottom-1.5 left-1/2 -translate-x-1/2", "left-1.5 top-1/2 -translate-y-1/2", "right-1.5 top-1/2 -translate-y-1/2"].map(
                         (position) => (
-                            <span key={position} aria-hidden className={`absolute h-1.5 w-1.5 rounded-full bg-black/15 ${position}`} />
+                            <span key={position} aria-hidden className={`absolute h-1.5 w-1.5 rounded-full bg-ink/15 ${position}`} />
                         ),
                     )}
                     <div

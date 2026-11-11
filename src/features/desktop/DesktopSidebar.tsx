@@ -7,7 +7,8 @@ import { PlotterHud } from "../plotter/PlotterHud";
 import { ActivityLog } from "./ActivityLog";
 import { MachinePanel } from "./MachinePanel";
 import { PlotSection } from "./PlotSection";
-import { ConnectionChip, MachineStateChip, Section } from "./parts";
+import { ThemeToggle } from "../theme/ThemeToggle";
+import { BrandMark, ConnectionChip, MachineStateChip, Section } from "./parts";
 
 /**
  * Desktop sidebar: app and connection status, the mode tabs, then what to plot (per
@@ -23,8 +24,14 @@ export function DesktopSidebar() {
         <aside aria-label="Plotter controls" className="flex h-screen w-[340px] shrink-0 flex-col border-r border-separator bg-panel text-ink">
             <header className="space-y-3.5 border-b border-separator px-5 pb-4 pt-5">
                 <div className="flex items-center justify-between gap-3">
-                    <h1 className="type-headline">Plotter Studio</h1>
-                    <ConnectionChip />
+                    <div className="flex min-w-0 items-center gap-2.5">
+                        <BrandMark />
+                        <h1 className="type-headline truncate">Plotter Studio</h1>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                        <ConnectionChip />
+                        <ThemeToggle />
+                    </div>
                 </div>
                 <ModeTabs />
                 <AutoModeError />

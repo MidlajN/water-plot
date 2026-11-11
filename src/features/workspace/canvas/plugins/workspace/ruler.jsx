@@ -13,6 +13,8 @@ export default class CanvasRuler {
             textColor: '#888',
         }
         this.enabled = false
+        /** Token colours (canvas/theme.ts); falls back to the old greys until set. */
+        this.theme = null
 
         this.eventHandler = {
             renderRuler: function(e) {
@@ -21,6 +23,11 @@ export default class CanvasRuler {
             }.bind(this)
         };
 
+    }
+
+    setTheme(theme) {
+        this.theme = theme
+        this.canvas.requestRenderAll()
     }
 
     rulerEnable() {
@@ -65,11 +72,20 @@ export default class CanvasRuler {
             top: 0,
             width: isHorizontal ? canvasSize.width : ruleSize,
             height: isHorizontal ? ruleSize : canvasSize.height,
-            fill: '#fff',
-            // stroke: '#ddd'
+            fill: this.theme?.rulerBackground ?? '#fff',
         });
 
-        const textColor = new Color('#888');
+        // Hairline between the ruler band and the desk.
+        this.drawLine(ctx, {
+            left: isHorizontal ? 0 : ruleSize - 0.5,
+            top: isHorizontal ? ruleSize - 0.5 : 0,
+            width: isHorizontal ? canvasSize.width : 0,
+            height: isHorizontal ? 0 : canvasSize.height,
+            stroke: this.theme?.rulerTick ?? '#ddd',
+        });
+
+        const textColor = new Color(this.theme?.rulerText ?? '#888');
+        const tickColor = this.theme?.rulerTick ?? textColor.toRgb();
         for (let i = 0; i + startOffset <= Math.ceil(unitLength); i += gap) {
             const position = (startOffset + i) * zoom;
             const textValue = startValue + i + '';
@@ -97,7 +113,7 @@ export default class CanvasRuler {
                 top,
                 width,
                 height,
-                stroke: textColor.toRgb()
+                stroke: tickColor
             })
         }
 
@@ -132,7 +148,7 @@ export default class CanvasRuler {
             isHorizontal,
             width: isHorizontal ? 160 : ruleSize - 4,
             height: isHorizontal ? ruleSize - 4 : 160,
-            backgroundColor: '#fff'
+            backgroundColor: this.theme?.rulerBackground ?? '#fff'
         }
         this.drawMask(ctx, {
             ...options,
@@ -147,7 +163,7 @@ export default class CanvasRuler {
             })
         }
 
-        const highlightColor = new Color('#43cad4');
+        const highlightColor = new Color(this.theme?.accent ?? '#43cad4');
         highlightColor.setAlpha(0.5)
 
         this.drawRect(ctx, {
@@ -236,7 +252,7 @@ export default class CanvasRuler {
         if (fill) ctx.fillStyle = fill;
         ctx.textAlign = align ?? 'left';
         ctx.textBaseline = 'top';
-        ctx.font = `${fontSize ?? 10}px sans-serif`;
+        ctx.font = `500 ${fontSize ?? 10}px ${this.theme?.fontFamily ?? 'sans-serif'}`;
         if (angle) {
           ctx.translate(left, top);
           ctx.rotate((Math.PI / 180) * angle);

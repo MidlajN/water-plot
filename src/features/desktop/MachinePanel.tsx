@@ -30,13 +30,13 @@ export function MachinePanel() {
                     <div key={axis} className="surface-raised rounded-xl px-3 py-2">
                         <dt className="type-caption font-semibold text-graphite">{axis}</dt>
                         <dd className="text-[1.25rem] font-semibold leading-7 tracking-[-0.01em] tabular-nums text-ink">
-                            {live ? telemetry.mpos[index].toFixed(2) : "–"}
+                            {live ? telemetry.mpos[index].toFixed(2) : "—"}
                         </dd>
                     </div>
                 ))}
             </dl>
             <p className="type-footnote -mt-2 text-graphite">
-                Feed <span className="tabular-nums text-ink">{live ? telemetry.feed.toLocaleString() : "–"}</span> mm/min
+                Feed <span className="tabular-nums text-ink">{live ? telemetry.feed.toLocaleString() : "—"}</span> mm/min
             </p>
 
             <div className="flex items-start gap-4">
@@ -49,7 +49,7 @@ export function MachinePanel() {
                     <JogButton label={`X −${step} mm`} disabled={!canJog} onClick={move("x", -1)}>
                         <ArrowLeft size={16} weight="bold" />
                     </JogButton>
-                    <span className="type-caption flex h-9 w-9 items-center justify-center tabular-nums text-graphite">{step}</span>
+                    <span aria-hidden className="type-caption flex h-9 w-9 items-center justify-center tabular-nums text-graphite">{step}</span>
                     <JogButton label={`X +${step} mm`} disabled={!canJog} onClick={move("x", 1)}>
                         <ArrowRight size={16} weight="bold" />
                     </JogButton>
@@ -64,7 +64,7 @@ export function MachinePanel() {
                     <JogButton label={`Z +${step} mm (pen up)`} disabled={!canJog} onClick={move("z", 1)}>
                         <CaretUp size={16} weight="bold" />
                     </JogButton>
-                    <span className="type-caption flex h-9 w-9 items-center justify-center font-semibold text-graphite">Z</span>
+                    <span aria-hidden className="type-caption flex h-9 w-9 items-center justify-center font-semibold text-graphite">Z</span>
                     <JogButton label={`Z −${step} mm (pen down)`} disabled={!canJog} onClick={move("z", -1)}>
                         <CaretDown size={16} weight="bold" />
                     </JogButton>

@@ -100,11 +100,14 @@ Settings live in `.env`. The worker reads only `.env`; Next.js reads `.env` and
 | `PLOTTER_PARK_X`, `PLOTTER_PARK_Y` | `0`, `0` | Where the pen goes after every plot, in mm, in the same coordinates as the drawing. The pen lifts to travel height first. |
 | `PLOTTER_PARK` | on | `false` leaves the pen over the last stroke instead of parking. |
 | `PLOTTER_MIRROR` | off | `true` flips every plot left–right across the 690 mm page, for drawing on the back of glass that is read from the other side. It covers Plot, Auto plots and uploaded `.gcode` files. Download G-code stays unmirrored, so a downloaded file is mirrored once when it's plotted. The park position isn't mirrored. |
-| `GROQ_API_KEY` | none | Groq API key (`gsk_…`) for AI Creative Studio. Server-side only. |
-| `GROQ_BASE_URL` | none | Groq's OpenAI-compatible endpoint, `https://api.groq.com/openai/v1`. |
-| `GROQ_MODEL` | none | Model for designs. It needs strict structured output, and Groq's built-in `browser_search` tool if web search is on. `openai/gpt-oss-120b` (or `openai/gpt-oss-20b`) supports both. |
-| `AI_MAX_OUTPUT_TOKENS` | none | Token limit for a design response (reasoning included). `8000` works well. |
-| `AI_ENABLE_WEB_SEARCH` | `false` | `true` lets prompts that need real-world or current facts run a web research step first. |
+| `AI_PROVIDER` | `gemini` | Which AI service AI Creative Studio uses: `gemini` or `groq`. Only the chosen provider's settings are needed. |
+| `GEMINI_API_KEY` | none | Google Gemini API key, from Google AI Studio. Server-side only. Needed when `AI_PROVIDER=gemini`. |
+| `GEMINI_MODEL` | `gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite` | Gemini model, or a comma-separated list tried in order: when one is busy (503), out of requests (429), not served (404) or slow (no answer in 45 s) the next answers. The default list is stable free-tier Flash and Flash-Lite models with separate quotas, about 20 requests a day each on the Free Tier. Not usable: Pro and Argon (no free quota), `gemini-3.5-flash` (shares 3.6's quota) and preview models (not served by the SDK's stable API). |
+| `GROQ_API_KEY` | none | Groq API key (`gsk_…`). Server-side only. Needed only when `AI_PROVIDER=groq`. |
+| `GROQ_BASE_URL` | none | Groq's OpenAI-compatible endpoint, `https://api.groq.com/openai/v1`. Only for `AI_PROVIDER=groq`. |
+| `GROQ_MODEL` | none | Groq model for designs (only for `AI_PROVIDER=groq`). It needs strict structured output, and Groq's built-in `browser_search` tool if web search is on. `openai/gpt-oss-120b` (or `openai/gpt-oss-20b`) supports both. |
+| `AI_MAX_OUTPUT_TOKENS` | none | Token limit for a design response, thinking included. Gemini 3 Flash can spend 4,000–7,000 tokens thinking before it draws, so use `16000`. |
+| `AI_ENABLE_WEB_SEARCH` | `false` | `true` lets prompts that need real-world or current facts run a web research step first. Keep it `false` on the Gemini Free Tier, which doesn't include Google Search. |
 | `AI_SVG_WIDTH_MM`, `AI_SVG_HEIGHT_MM` | none | Working area generated designs are fitted to, in mm (`690` × `290`). |
 
 `next dev` reloads `.env` when it changes. The worker doesn't, so restart `pnpm worker`
@@ -253,6 +256,11 @@ that breaks them, which is a handy check of the app's G-code.
 The sidebar on the left holds the controls. The viewer on the right shows the page, or
 the Auto mode preview.
 
+- **Appearance.** Light and dark follow your system setting. The button next to the
+  connection status (and *Appearance* in the phone's ⋯ menu) picks Light, Dark or Match
+  system for this browser. The paper stays paper in both: plots and exports are
+  unchanged.
+
 - **Mode tabs.** Choosing **Auto** turns the scheduler on; choosing **Edit** or **AI**
   turns it off. The app opens in Auto when the scheduler is already on.
 - **Plot.**
@@ -274,9 +282,25 @@ stroke, so the pen lifts less often.
 ### Phone
 
 The page takes the top half of the screen. The card at the bottom has the tools,
-elements, text input, mode tabs, and a **Send** button that plots the page. While a plot
+elements, text input, mode tabs, and a **Send** button that plots the page. The ⋯ menu
+has export, undo/redo, delete and the appearance choice. While a plot
 runs, the card shows its progress and Pause/Abort. The joystick moves the selected
 object; double-tap it to send the object to one of 9 spots on the page.
+
+### Design system
+
+The interface is built from one set of tokens and components:
+
+- **Tokens** live in `src/app/globals.css`: semantic colours (surfaces, text, lines,
+  accent, status) for light and dark, the type scale, radii, shadows and easing.
+- **Components** live in `src/components/ui/`: button, segmented control, chip,
+  fields, section and card, status pill, progress, menu, tooltip, popover and the
+  paper-on-desk motif.
+- **Preview:** in development, `/design` shows every token and component in both themes.
+- **Agent skills:** the design skills in `.claude/skills/` are reference markdown only;
+  no hooks or scripts are installed. They are Impeccable, Apple HIG (`hig-*`), and Emil
+  Kowalski's design-engineering and animation skills (`emil-design-eng`, `animate`,
+  `review-animations`, `improve-animations`, `gestures`, `apple-design` and more; MIT).
 
 ### Auto mode
 
@@ -299,13 +323,17 @@ job and sending it, the job is marked **Skipped** the next time the worker start
 ## AI Creative Studio
 
 AI mode turns a short description ("a minimal line-art flower", "a two-line poem about
-the sea") into a plotter-ready design using Groq.
+the sea") into a plotter-ready design using Google Gemini's free-tier Flash models
+(`gemini-3.8-flash` first, falling back through other free Flash models when one is
+busy or out of requests). Set `AI_PROVIDER=groq` to use Groq instead; everything below works the same
+with either.
 
-- **Server-side only.** `POST /api/ai/design` calls Groq; the key never reaches the
-  browser.
-- **Structured output.** The model must answer in a strict JSON Schema (title,
-  category, text lines, illustration SVG and boxes in mm). The answer is checked again
-  with Zod. Models without strict mode fall back to JSON mode, with the same checks.
+- **Server-side only.** `POST /api/ai/design` calls the provider; the key never reaches
+  the browser. Gemini requests are sent with `store: false`, so Google doesn't keep
+  them in its interaction history.
+- **Structured output.** The model must answer in a JSON Schema (title, category, text
+  lines, illustration SVG and boxes in mm). The answer is checked again with Zod.
+  Groq models without strict mode fall back to JSON mode, with the same checks.
 - **Plotter-safe SVG.** Every illustration is parsed and rebuilt from an allowlist:
   `path`, `line`, `polyline`, `polygon`, `circle`, `ellipse`, `rect` and `g`, with
   numeric geometry only. Scripts, links, images, CSS and foreign content are
@@ -313,11 +341,13 @@ the sea") into a plotter-ready design using Groq.
   black strokes with no fill. Poems and quotes come back as text lines, which the app
   letters with its own single-line fonts.
 - **Web search.** Only prompts that need real-world or current facts ("inspired by
-  the Eiffel Tower", "an accurate map of…") run a research step first, using Groq's
-  built-in `browser_search` tool. Groq can't combine that tool with structured
-  output, so the research runs as its own call and its notes and sources feed the
-  design call. Ordinary creative prompts never search. If search is on but the model
-  doesn't support it, the API returns a configuration error.
+  the Eiffel Tower", "an accurate map of…") run a research step first: Google Search
+  grounding with Gemini, or the built-in `browser_search` tool with Groq. The research
+  runs as its own call, and its notes and sources feed the design call. Ordinary
+  creative prompts never search. If search is on but the model doesn't support it,
+  the API returns an error. Google Search grounding has its own quota, and the Gemini
+  Free Tier has none: then the design runs without research (no sources) and the
+  server logs a warning.
 
 ## App API
 
@@ -400,7 +430,7 @@ can fill it in. Set at least these:
 
 ```bash
 GATEWAY_URL=http://127.0.0.1:8080
-GROQ_API_KEY=gsk_…
+GEMINI_API_KEY=…
 ```
 
 Then start the services:

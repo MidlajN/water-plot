@@ -35,7 +35,7 @@ export function AutoSettings() {
             <h2 id="auto-settings-title" className="type-footnote mb-1.5 px-4 font-medium uppercase tracking-[0.04em] text-graphite">
                 Settings
             </h2>
-            <div className="overflow-hidden rounded-[0.875rem] bg-white">
+            <div className="overflow-hidden rounded-[0.875rem] bg-surface-raised">
                 {/* The whole row is the target; the native select sits invisibly on top. */}
                 <label className="relative flex min-h-12 items-center gap-3 px-4 transition-colors has-[select:active]:bg-grouped has-[select:focus-visible]:ring-2 has-[select:focus-visible]:ring-inset has-[select:focus-visible]:ring-teal">
                     <span className="type-body flex-1 text-ink">Clock time zone</span>

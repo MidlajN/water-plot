@@ -78,7 +78,7 @@ export function PlotterHud({
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={Math.round(percent)}
-                className="h-1.5 overflow-hidden rounded-full bg-black/[0.07]"
+                className="h-1.5 overflow-hidden rounded-full bg-ink/[0.07]"
             >
                 <div
                     className={`h-full origin-left rounded-full transition-transform duration-500 ease-out ${fill}`}
@@ -100,7 +100,7 @@ export function PlotterHud({
             </div>
 
             {showPosition && telemetry && (
-                <dl aria-label="Position" className="type-caption grid grid-cols-3 gap-1 rounded-lg bg-black/[0.04] px-2.5 py-1.5 tabular-nums">
+                <dl aria-label="Position" className="type-caption grid grid-cols-3 gap-1 rounded-lg bg-ink/[0.04] px-2.5 py-1.5 tabular-nums">
                     {(["X", "Y", "Z"] as const).map((axis, index) => (
                         <div key={axis} className="flex gap-1.5">
                             <dt className="font-semibold text-graphite">{axis}</dt>
@@ -116,7 +116,7 @@ export function PlotterHud({
                 <button
                     type="button"
                     onClick={dismiss}
-                    className={`press flex w-full items-center justify-center gap-1.5 bg-black/[0.055] font-semibold text-ink outline-none hover:bg-black/[0.08] focus-visible:ring-2 focus-visible:ring-teal ${
+                    className={`press flex w-full items-center justify-center gap-1.5 bg-ink/[0.055] font-semibold text-ink outline-none hover:bg-ink/[0.08] focus-visible:ring-2 focus-visible:ring-teal ${
                         compact ? "type-footnote h-9 rounded-[0.625rem]" : "type-body h-11 rounded-xl"
                     }`}
                 >

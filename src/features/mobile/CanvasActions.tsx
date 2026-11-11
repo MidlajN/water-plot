@@ -7,7 +7,7 @@ import useCanvas from "../workspace/canvas/CanvasContext";
 import { MoreMenu } from "./MoreMenu";
 
 const iconButton =
-    "press flex h-9 w-9 items-center justify-center rounded-full text-ink outline-none hover:bg-black/[0.05] focus-visible:ring-2 focus-visible:ring-teal disabled:opacity-35";
+    "press flex h-9 w-9 items-center justify-center rounded-full text-ink outline-none hover:bg-ink/[0.05] focus-visible:ring-2 focus-visible:ring-teal disabled:opacity-35";
 
 /**
  * Phone Edit: controls floating over the top of the page. The plotter's connection on

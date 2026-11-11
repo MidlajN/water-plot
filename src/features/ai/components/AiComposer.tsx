@@ -3,6 +3,7 @@
 import { useRef, type KeyboardEvent } from "react";
 import { CircleNotch, Sparkle } from "@phosphor-icons/react";
 
+import { Tooltip } from "@/components/ui/tooltip";
 import { focusRing } from "../../desktop/parts";
 import { CATEGORY_CHOICES, EXAMPLE_PROMPTS, useAiStudio } from "../AiStudioContext";
 import { LIMITS } from "../constants";
@@ -16,6 +17,7 @@ export function AiComposer({ compact = false }: { compact?: boolean }) {
     const field = useRef<HTMLTextAreaElement>(null);
     const generating = busy;
     const tooShort = prompt.trim().length < LIMITS.promptMin;
+    const nearLimit = prompt.length > LIMITS.promptMax * 0.9;
 
     const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
         // ⌘/Ctrl+Enter generates; plain Enter adds a line.
@@ -35,7 +37,7 @@ export function AiComposer({ compact = false }: { compact?: boolean }) {
         <div className="space-y-3">
             <form
                 aria-label="Describe a design"
-                className="space-y-3 rounded-[1.25rem] bg-white p-4 transition-shadow focus-within:shadow-[0_0_0_2px_rgb(28_128_150/0.35)]"
+                className="space-y-3 rounded-[1.25rem] bg-surface-raised p-4 transition-shadow focus-within:shadow-[0_0_0_2px_var(--accent-line)]"
                 onSubmit={(event) => {
                     event.preventDefault();
                     void generate();
@@ -68,7 +70,7 @@ export function AiComposer({ compact = false }: { compact?: boolean }) {
                             disabled={generating}
                             onClick={() => setCategory(id)}
                             className={`press type-footnote h-8 shrink-0 rounded-full px-3.5 font-semibold disabled:opacity-50 ${focusRing} ${
-                                category === id ? "bg-teal text-white" : "bg-grouped text-ink/75 hover:text-ink"
+                                category === id ? "bg-teal text-on-accent" : "bg-grouped text-ink/75 hover:text-ink"
                             }`}
                         >
                             {label}
@@ -77,21 +79,23 @@ export function AiComposer({ compact = false }: { compact?: boolean }) {
                 </div>
 
                 <div className="flex items-center justify-between gap-3 border-t border-separator pt-3">
-                    <span className="type-caption tabular-nums text-graphite" aria-label="Characters used">
+                    <span className={`type-caption tabular-nums ${nearLimit ? "text-warn" : "text-graphite"}`} aria-label="Characters used">
                         {prompt.length}/{LIMITS.promptMax}
                     </span>
-                    <button
-                        type="submit"
-                        disabled={generating || tooShort}
-                        className={`press type-footnote flex h-10 items-center justify-center gap-2 rounded-full bg-teal px-5 font-semibold text-white hover:bg-teal-dark disabled:cursor-not-allowed disabled:bg-teal/35 ${focusRing}`}
-                    >
-                        {generating ? (
-                            <CircleNotch size={16} weight="bold" className="motion-safe:animate-spin" />
-                        ) : (
-                            <Sparkle size={16} weight="fill" />
-                        )}
-                        {generating ? "Creating…" : "Generate"}
-                    </button>
+                    <Tooltip label="Generate" shortcut="Ctrl/⌘ + Enter">
+                        <button
+                            type="submit"
+                            disabled={generating || tooShort}
+                            className={`press type-footnote flex h-10 items-center justify-center gap-2 rounded-full bg-teal px-5 font-semibold text-on-accent hover:bg-teal-dark disabled:cursor-not-allowed disabled:bg-teal/35 ${focusRing}`}
+                        >
+                            {generating ? (
+                                <CircleNotch size={16} weight="bold" className="motion-safe:animate-spin" />
+                            ) : (
+                                <Sparkle size={16} weight="fill" />
+                            )}
+                            {generating ? "Creating…" : "Generate"}
+                        </button>
+                    </Tooltip>
                 </div>
             </form>
 
@@ -104,7 +108,7 @@ export function AiComposer({ compact = false }: { compact?: boolean }) {
                                 type="button"
                                 disabled={generating}
                                 onClick={() => applyExample(example)}
-                                className={`press type-footnote surface-raised rounded-full px-3.5 py-1.5 text-ink hover:bg-white/70 disabled:opacity-50 ${focusRing}`}
+                                className={`press type-footnote surface-raised rounded-full px-3.5 py-1.5 text-ink hover:bg-surface-raised/70 disabled:opacity-50 ${focusRing}`}
                             >
                                 {example.prompt}
                             </button>

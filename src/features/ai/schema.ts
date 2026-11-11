@@ -19,7 +19,12 @@ const BoxSchema = z.object({
 export type Box = z.infer<typeof BoxSchema>;
 
 const TextSchema = z.object({
-    lines: z.array(z.string().trim().min(1).max(LIMITS.textLineMax)).min(1).max(LIMITS.textLinesMax),
+    // Models sometimes add blank spacer lines (e.g. between a quote and its author);
+    // they're dropped before the count and length checks.
+    lines: z
+        .array(z.string())
+        .transform((lines) => lines.map((line) => line.trim()).filter(Boolean))
+        .pipe(z.array(z.string().max(LIMITS.textLineMax)).min(1).max(LIMITS.textLinesMax)),
     font: z.enum(TEXT_FONTS),
     box: BoxSchema,
 });
@@ -60,8 +65,8 @@ export const ModelDesignSchema = z
 export type ModelDesign = z.infer<typeof ModelDesignSchema>;
 
 /**
- * The same contract as JSON Schema for Groq's strict structured output. Written by hand
- * to stay within the documented strict subset (every property required, nullable via a
+ * The same contract as JSON Schema for structured output (Gemini's response_format and
+ * Groq's strict json_schema). Written by hand to stay within both documented subsets (every property required, nullable via a
  * "null" union, additionalProperties false). Length and count limits are left to
  * ModelDesignSchema, which re-checks everything.
  */

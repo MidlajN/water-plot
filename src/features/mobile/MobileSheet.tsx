@@ -15,9 +15,6 @@ import { ElementsCarousel } from "./ElementsCarousel";
 import { Joystick } from "./Joystick";
 import { MobileTextEditor, type TextEditorHandle } from "./MobileTextEditor";
 
-const ACTIVE = "#1c8096";
-const IDLE = "#3a4250";
-
 type Option = "select" | "pen" | "text" | "elements";
 
 const OPTIONS: { id: Option; label: string; icon: (color: string) => ReactNode }[] = [
@@ -65,11 +62,11 @@ export function MobileSheet() {
 
             <section
                 aria-label="Edit controls"
-                className="fixed inset-x-0 bottom-0 z-30 flex h-[50dvh] flex-col rounded-t-[1.75rem] bg-white shadow-[0_-0.5px_0_rgb(0_0_0/0.06),0_-12px_36px_rgb(31_39_51/0.10)]"
+                className="fixed inset-x-0 bottom-0 z-30 flex h-[50dvh] flex-col rounded-t-[1.75rem] bg-surface-raised shadow-[0_-0.5px_0_var(--line),0_-12px_36px_rgb(0_0_0/0.1)]"
             >
                 <Joystick />
 
-                <div aria-hidden className="mx-auto mb-1.5 mt-2 h-[5px] w-9 shrink-0 rounded-full bg-black/[0.12]" />
+                <div aria-hidden className="mx-auto mb-1.5 mt-2 h-[5px] w-9 shrink-0 rounded-full bg-ink/[0.12]" />
 
                 <nav aria-label="Tools" className="shrink-0 px-4">
                     <ul className="flex gap-1 rounded-2xl bg-grouped p-1">
@@ -90,11 +87,11 @@ export function MobileSheet() {
                                             <motion.span
                                                 layoutId="sheet-tool-highlight"
                                                 aria-hidden
-                                                className="absolute inset-0 rounded-xl bg-white shadow-[0_0_0_0.5px_rgb(0_0_0/0.05),0_1px_3px_rgb(0_0_0/0.1)]"
+                                                className="absolute inset-0 rounded-xl bg-surface-raised shadow-hairline"
                                                 transition={reduceMotion ? { duration: 0 } : { type: "spring", bounce: 0, duration: 0.3 }}
                                             />
                                         )}
-                                        <span className="relative flex h-6 items-center">{option.icon(active ? ACTIVE : IDLE)}</span>
+                                        <span className="relative flex h-6 items-center">{option.icon("currentColor")}</span>
                                         <span className="relative">{option.label}</span>
                                     </button>
                                 </li>

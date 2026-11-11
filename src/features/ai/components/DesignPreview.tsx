@@ -23,9 +23,9 @@ const hostOf = (url: string) => {
 };
 
 /**
- * The page as it will be plotted: a white sheet at the working area's true proportions,
- * its margin, the (sanitized) illustration, and the text lettered with the same
- * single-line font the plotter uses.
+ * The page as it will be plotted: the sheet at the working area's true proportions, its
+ * margin, the (sanitized) illustration, and the text lettered with the same single-line
+ * font the plotter uses. Paper and ink stay paper and ink in both themes.
  */
 function Sheet({ version, dimmed }: { version: DesignVersion; dimmed: boolean }) {
     const { design } = version;
@@ -45,23 +45,23 @@ function Sheet({ version, dimmed }: { version: DesignVersion; dimmed: boolean })
         <svg
             role="img"
             aria-label={`Preview of ${label}`}
-            viewBox={`-4 -4 ${width + 8} ${height + 8}`}
-            className={`block w-full transition-opacity ${dimmed ? "opacity-40" : ""}`}
+            viewBox={`0 0 ${width} ${height}`}
+            className={`block w-full rounded-[2px] shadow-paper transition-opacity duration-200 ${dimmed ? "opacity-45" : ""}`}
+            style={{ background: "var(--paper)" }}
         >
-            <rect x={0} y={0} width={width} height={height} fill="#fff" stroke="#d4d8de" strokeWidth={0.6} />
             <rect
                 x={MARGIN_MM}
                 y={MARGIN_MM}
                 width={width - 2 * MARGIN_MM}
                 height={height - 2 * MARGIN_MM}
                 fill="none"
-                stroke="#d9dfe3"
-                strokeWidth={0.5}
+                style={{ stroke: "var(--accent-line)" }}
+                strokeWidth={0.6}
                 strokeDasharray="3 3"
             />
             {illustration && <image href={illustration} x={0} y={0} width={width} height={height} />}
             {lettering && (
-                <path d={lettering.d} fill="none" stroke="#000" strokeWidth={0.8} strokeLinecap="round" strokeLinejoin="round" />
+                <path d={lettering.d} fill="none" stroke="#111" strokeWidth={0.8} strokeLinecap="round" strokeLinejoin="round" />
             )}
         </svg>
     );
@@ -110,7 +110,7 @@ export function DesignPreview({ compact = false }: { compact?: boolean }) {
             initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: "spring", bounce: 0, duration: 0.45 }}
-            className={`space-y-4 rounded-[1.25rem] bg-white ${compact ? "p-4" : "p-5"}`}
+            className={`space-y-4 rounded-[1.25rem] bg-surface-raised ${compact ? "p-4" : "p-5"}`}
         >
             <header className="flex items-start justify-between gap-4">
                 <div className="min-w-0 space-y-1">
@@ -127,7 +127,7 @@ export function DesignPreview({ compact = false }: { compact?: boolean }) {
                             aria-label="Previous version"
                             disabled={index === 0 || busy}
                             onClick={() => showVersion(index - 1)}
-                            className={`press flex h-7 w-7 items-center justify-center rounded-full text-ink hover:bg-white disabled:opacity-30 ${focusRing}`}
+                            className={`press flex h-7 w-7 items-center justify-center rounded-full text-ink hover:bg-ink/[0.05] disabled:opacity-30 ${focusRing}`}
                         >
                             <CaretLeft size={14} weight="bold" />
                         </button>
@@ -139,7 +139,7 @@ export function DesignPreview({ compact = false }: { compact?: boolean }) {
                             aria-label="Next version"
                             disabled={index === versions.length - 1 || busy}
                             onClick={() => showVersion(index + 1)}
-                            className={`press flex h-7 w-7 items-center justify-center rounded-full text-ink hover:bg-white disabled:opacity-30 ${focusRing}`}
+                            className={`press flex h-7 w-7 items-center justify-center rounded-full text-ink hover:bg-ink/[0.05] disabled:opacity-30 ${focusRing}`}
                         >
                             <CaretRight size={14} weight="bold" />
                         </button>
@@ -193,7 +193,7 @@ export function DesignPreview({ compact = false }: { compact?: boolean }) {
                     <button
                         type="submit"
                         disabled={busy || !instruction.trim()}
-                        className={`press type-footnote flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-black/[0.055] px-3.5 font-semibold text-ink hover:bg-black/[0.08] disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
+                        className={`press type-footnote flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-ink/[0.055] px-3.5 font-semibold text-ink hover:bg-ink/[0.08] disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
                     >
                         <MagicWand size={15} weight="bold" />
                         Refine
@@ -207,7 +207,7 @@ export function DesignPreview({ compact = false }: { compact?: boolean }) {
                             type="button"
                             disabled={busy}
                             onClick={() => submitRefine(suggestion)}
-                            className={`press type-footnote rounded-full bg-grouped px-3.5 py-1.5 text-ink hover:bg-black/[0.07] disabled:opacity-50 ${focusRing}`}
+                            className={`press type-footnote rounded-full bg-grouped px-3.5 py-1.5 text-ink hover:bg-ink/[0.07] disabled:opacity-50 ${focusRing}`}
                         >
                             {suggestion}
                         </button>
