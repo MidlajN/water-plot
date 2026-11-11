@@ -30,3 +30,11 @@ export const plotJobs = sqliteTable("plot_jobs", {
         gatewayJobId: text("gateway_job_id"),
     }, (table) => [index("plot_jobs_status_idx").on(table.status)],
 );
+/** SVGs people uploaded to Elements. The file is data/uploads/<id>.svg (sanitized line art). */
+export const svgUploads = sqliteTable("svg_uploads", {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    createdAt: text("created_at")
+        .notNull()
+        .$defaultFn(() => new Date().toISOString()),
+});

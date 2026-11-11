@@ -1,5 +1,6 @@
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 
+import { UPLOAD_MAX_BYTES } from "../uploads/messages";
 import { MARGIN_MM } from "./constants";
 
 /**
@@ -184,9 +185,10 @@ const PARAMS: Record<string, number> = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 
 
 /**
  * Parses and re-serialises path data, adding a conservative hull of every segment to
- * `bounds` (end and control points; arcs by the region their circle can reach).
+ * `bounds` (end and control points; arcs by the region their circle can reach). Numbers
+ * are written with `format` (the AI path's 3-decimal `fmt` by default).
  */
-function sanitizePath(d: string, m: Matrix, bounds: Bounds): string {
+function sanitizePath(d: string, m: Matrix, bounds: Bounds, format: (value: number) => string = fmt): string {
     let i = 0;
     const out: string[] = [];
     const length = d.length;
@@ -258,7 +260,7 @@ function sanitizePath(d: string, m: Matrix, bounds: Bounds): string {
                 y = values[1] + oy;
                 startX = x;
                 startY = y;
-                out.push(`M${fmt(x)} ${fmt(y)}`);
+                out.push(`M${format(x)} ${format(y)}`);
                 local.add(x, y);
                 command = relative ? "l" : "L";
                 break;
@@ -268,7 +270,7 @@ function sanitizePath(d: string, m: Matrix, bounds: Bounds): string {
                 if (upper !== "V") x = values[0] + ox;
                 if (upper === "L") y = values[1] + oy;
                 if (upper === "V") y = values[0] + oy;
-                out.push(`L${fmt(x)} ${fmt(y)}`);
+                out.push(`L${format(x)} ${format(y)}`);
                 local.add(x, y);
                 break;
             case "C":
@@ -281,7 +283,7 @@ function sanitizePath(d: string, m: Matrix, bounds: Bounds): string {
                     local.add(rx, ry);
                 }
                 for (let p = 0; p < points.length; p += 2) local.add(points[p], points[p + 1]);
-                out.push(`${upper}${points.map(fmt).join(" ")}`);
+                out.push(`${upper}${points.map(format).join(" ")}`);
                 const n = points.length;
                 if (upper === "Q") quad = [points[0], points[1]];
                 else cubic = [points[n - 4], points[n - 3]];
@@ -294,7 +296,7 @@ function sanitizePath(d: string, m: Matrix, bounds: Bounds): string {
                 local.add(quad[0], quad[1]);
                 x = values[0] + ox;
                 y = values[1] + oy;
-                out.push(`T${fmt(x)} ${fmt(y)}`);
+                out.push(`T${format(x)} ${format(y)}`);
                 local.add(x, y);
                 break;
             }
@@ -306,7 +308,7 @@ function sanitizePath(d: string, m: Matrix, bounds: Bounds): string {
                 // Every arc point is within 2r of both endpoints.
                 local.add(Math.max(x, ex) - 2 * r, Math.max(y, ey) - 2 * r);
                 local.add(Math.min(x, ex) + 2 * r, Math.min(y, ey) + 2 * r);
-                out.push(`A${fmt(Math.abs(rx))} ${fmt(Math.abs(ry))} ${fmt(rotation)} ${large} ${sweep} ${fmt(ex)} ${fmt(ey)}`);
+                out.push(`A${format(Math.abs(rx))} ${format(Math.abs(ry))} ${format(rotation)} ${large} ${sweep} ${format(ex)} ${format(ey)}`);
                 x = ex;
                 y = ey;
                 break;
@@ -539,4 +541,287 @@ export function fitBox(area: { width: number; height: number }, target?: FitBox 
     const height = Math.min(target.height, safe.y + safe.height - y);
     if (width < SVG_LIMITS.minBoxMm || height < SVG_LIMITS.minBoxMm) return safe;
     return { x, y, width, height };
+}
+
+// ---------------------------------------------------------------------------
+// Uploads
+//
+// Real-world files (Illustrator, Inkscape, Figma, icon packs) carry DOCTYPEs, <defs>,
+// <style>, text, editor attributes and hidden layers. Instead of rejecting them, upload
+// mode keeps only the drawable geometry and drops everything else. That is as safe as
+// rejecting: the output is still written from scratch with allowlisted tag names and
+// re-formatted numbers; no attribute value is ever copied through.
+
+export const UPLOAD_LIMITS = {
+    maxBytes: UPLOAD_MAX_BYTES,
+    maxElements: 3000,
+    maxPathChars: 300_000,
+    maxDepth: 32,
+} as const;
+
+/** Things left out of an upload that the person may want to know about. */
+export type UploadNote = "text" | "images" | "links" | "skipped";
+
+export type UploadSanitizeResult =
+    | { ok: true; svg: string; notes: UploadNote[] }
+    | { ok: false; code: "too_large" | "not_svg" | "empty" | "too_complex" | "too_deep"; notes: UploadNote[] };
+
+/** A size limit: always fails the whole upload, never just the element. */
+class LimitRejection extends Error {
+    constructor(readonly code: "too_complex" | "too_deep") {
+        super(code);
+    }
+}
+
+const CONTAINERS = new Set(["g", "a", "switch", "svg"]);
+const DRAWABLE = new Set(["path", "line", "polyline", "polygon", "circle", "ellipse", "rect"]);
+const NOTED: Record<string, UploadNote> = { text: "text", tspan: "text", textPath: "text", image: "images", use: "links" };
+
+/** Up to 7 significant digits, so tiny scales and large coordinates both survive. */
+const precise = (value: number) => String(Number(value.toPrecision(7)));
+
+interface Paint {
+    fill: boolean;
+    stroke: boolean;
+    visible: boolean;
+}
+
+interface UploadState {
+    elements: number;
+    pathChars: number;
+    bounds: Bounds;
+    notes: Set<UploadNote>;
+}
+
+/** Properties an inline `style` may set here: paint and visibility, never geometry. */
+const STYLE_PROPERTIES = new Set(["fill", "stroke", "fill-opacity", "stroke-opacity", "opacity", "display", "visibility"]);
+
+/** Attributes plus paint and visibility from an inline `style` (style wins, as in CSS). */
+function presentation(attributes: Record<string, string>): Record<string, string> {
+    const props: Record<string, string> = {};
+    for (const [rawKey, value] of Object.entries(attributes)) props[rawKey.replace(/^@_/, "")] = String(value).trim();
+    for (const declaration of (props.style ?? "").split(";")) {
+        const colon = declaration.indexOf(":");
+        const property = declaration.slice(0, colon).trim().toLowerCase();
+        if (colon > 0 && STYLE_PROPERTIES.has(property)) props[property] = declaration.slice(colon + 1).replace(/!important/i, "").trim();
+    }
+    return props;
+}
+
+const isZero = (value: string | undefined) => value !== undefined && parseFloat(value) === 0;
+const paints = (value: string | undefined, inherited: boolean) =>
+    value === undefined || value === "inherit" ? inherited : !/^(none|transparent)$/i.test(value);
+
+/** The paint an element passes down, or null when it (and its content) shows nothing. */
+function inheritPaint(props: Record<string, string>, parent: Paint): Paint | null {
+    if (props.display === "none" || isZero(props.opacity)) return null;
+    const visible = props.visibility === undefined || props.visibility === "inherit" ? parent.visible : props.visibility === "visible";
+    return {
+        fill: paints(props.fill, parent.fill) && !isZero(props["fill-opacity"]),
+        stroke: paints(props.stroke, parent.stroke) && !isZero(props["stroke-opacity"]),
+        visible,
+    };
+}
+
+/** A nested <svg>: its x/y offset, plus its viewBox scaled to fit ("xMidYMid meet"). */
+function nestedSvgMatrix(props: Record<string, string>): Matrix {
+    const read = (key: string, fallback: number) => (props[key] !== undefined && NUMBER.test(props[key]) ? parseFloat(props[key]) : fallback);
+    const x = read("x", 0);
+    const y = read("y", 0);
+    const box = (props.viewBox ?? "").trim().split(/[\s,]+/).map(Number);
+    const width = read("width", NaN);
+    const height = read("height", NaN);
+    if (box.length !== 4 || !box.every(Number.isFinite) || !(box[2] > 0 && box[3] > 0) || !(width > 0 && height > 0)) {
+        return [1, 0, 0, 1, x, y];
+    }
+    const scale = Math.min(width / box[2], height / box[3]);
+    const tx = x + (width - box[2] * scale) / 2 - box[0] * scale;
+    const ty = y + (height - box[3] * scale) / 2 - box[1] * scale;
+    return [scale, 0, 0, scale, tx, ty];
+}
+
+/** Marks a stroke width to fill in once the drawing's size (and so the stroke) is known. */
+const STROKE_SLOT = /§([^§]+)§/g;
+
+/**
+ * One drawable element as markup, its bounds committed only if all of it parses. Groups
+ * aren't written out, so the element carries the whole matrix down to it. A scaling
+ * matrix would scale the stroke too, so such an element gets a compensating width.
+ */
+function emitUploadShape(name: string, props: Record<string, string>, parent: Matrix, state: UploadState): string {
+    const matrix = props.transform !== undefined ? multiply(parent, parseTransform(props.transform)) : parent;
+    const local = new Bounds();
+    const out: Record<string, string> = {};
+    if (matrix.some((value, index) => value !== IDENTITY[index])) {
+        out.transform = `matrix(${matrix.map(precise).join(" ")})`;
+        const scale = Math.sqrt(Math.abs(matrix[0] * matrix[3] - matrix[1] * matrix[2]));
+        if (scale > 0 && Math.abs(scale - 1) > 1e-6) out["stroke-width"] = `§${scale}§`;
+    }
+
+    const num = (key: string, fallback?: number) => {
+        if (props[key] === undefined) {
+            if (fallback === undefined) throw new Rejection(`<${name}> is missing ${key}`);
+            return fallback;
+        }
+        return parseNumber(props[key], key);
+    };
+
+    switch (name) {
+        case "path": {
+            const d = props.d ?? "";
+            state.pathChars += d.length;
+            if (state.pathChars > UPLOAD_LIMITS.maxPathChars) throw new LimitRejection("too_complex");
+            out.d = sanitizePath(d, matrix, local, precise);
+            break;
+        }
+        case "line": {
+            const [x1, y1, x2, y2] = [num("x1", 0), num("y1", 0), num("x2", 0), num("y2", 0)];
+            Object.assign(out, { x1: precise(x1), y1: precise(y1), x2: precise(x2), y2: precise(y2) });
+            local.add(...apply(matrix, x1, y1));
+            local.add(...apply(matrix, x2, y2));
+            break;
+        }
+        case "polyline":
+        case "polygon": {
+            const values = parseNumberList(props.points ?? "", "points");
+            if (values.length < 4 || values.length % 2) throw new Rejection(`<${name}> points must be coordinate pairs`);
+            for (let p = 0; p < values.length; p += 2) local.add(...apply(matrix, values[p], values[p + 1]));
+            out.points = values.map(precise).join(" ");
+            break;
+        }
+        case "circle": {
+            const [cx, cy, r] = [num("cx", 0), num("cy", 0), num("r")];
+            if (r <= 0) throw new Rejection("<circle> radius must be positive");
+            Object.assign(out, { cx: precise(cx), cy: precise(cy), r: precise(r) });
+            local.addBox(matrix, cx - r, cy - r, cx + r, cy + r);
+            break;
+        }
+        case "ellipse": {
+            const [cx, cy, rx, ry] = [num("cx", 0), num("cy", 0), num("rx"), num("ry")];
+            if (rx <= 0 || ry <= 0) throw new Rejection("<ellipse> radii must be positive");
+            Object.assign(out, { cx: precise(cx), cy: precise(cy), rx: precise(rx), ry: precise(ry) });
+            local.addBox(matrix, cx - rx, cy - ry, cx + rx, cy + ry);
+            break;
+        }
+        case "rect": {
+            const [x, y, width, height] = [num("x", 0), num("y", 0), num("width"), num("height")];
+            if (width <= 0 || height <= 0) throw new Rejection("<rect> size must be positive");
+            Object.assign(out, { x: precise(x), y: precise(y), width: precise(width), height: precise(height) });
+            if (props.rx !== undefined) out.rx = precise(num("rx"));
+            if (props.ry !== undefined) out.ry = precise(num("ry"));
+            local.addBox(matrix, x, y, x + width, y + height);
+            break;
+        }
+    }
+
+    if (!local.empty) {
+        state.bounds.add(local.minX, local.minY);
+        state.bounds.add(local.maxX, local.maxY);
+    }
+    const attrs = Object.entries(out)
+        .map(([key, value]) => ` ${key}="${value}"`)
+        .join("");
+    return `<${name}${attrs}/>`;
+}
+
+function walkUpload(nodes: XmlNode[], parent: Matrix, paint: Paint, depth: number, state: UploadState): string {
+    let markup = "";
+
+    for (const node of nodes) {
+        const name = elementName(node);
+        if (!name || name.startsWith("#") || name.startsWith("?") || name.includes(":")) continue;
+        if (NOTED[name]) {
+            state.notes.add(NOTED[name]);
+            continue;
+        }
+        if (!CONTAINERS.has(name) && !DRAWABLE.has(name)) continue;
+
+        state.elements++;
+        if (state.elements > UPLOAD_LIMITS.maxElements) throw new LimitRejection("too_complex");
+
+        const props = presentation(node[":@"] ?? {});
+        const own = inheritPaint(props, paint);
+        if (!own) continue;
+
+        if (CONTAINERS.has(name)) {
+            if (depth >= UPLOAD_LIMITS.maxDepth) throw new LimitRejection("too_deep");
+            let matrix: Matrix;
+            try {
+                matrix = name === "svg" ? multiply(parent, nestedSvgMatrix(props)) : parent;
+                if (props.transform !== undefined) matrix = multiply(matrix, parseTransform(props.transform));
+            } catch (error) {
+                if (!(error instanceof Rejection)) throw error;
+                state.notes.add("skipped");
+                continue;
+            }
+            const inner = walkUpload((node[name] as XmlNode[]) ?? [], matrix, own, depth + 1, state);
+            // Groups are flattened into their matrix, so the output needs no nesting.
+            markup += inner;
+            continue;
+        }
+
+        if (!own.visible || (!own.fill && !own.stroke)) continue;
+        try {
+            markup += emitUploadShape(name, props, parent, state);
+        } catch (error) {
+            if (!(error instanceof Rejection)) throw error;
+            state.notes.add("skipped");
+        }
+    }
+
+    return markup;
+}
+
+/**
+ * Turns an uploaded SVG into plotter line art: the drawable geometry only, as round-capped
+ * #111 outlines in a tight viewBox (stroke 2% of the longer side, like the built-in art).
+ */
+export function sanitizeUploadSvg(svg: string): UploadSanitizeResult {
+    const state: UploadState = { elements: 0, pathChars: 0, bounds: new Bounds(), notes: new Set() };
+    const fail = (code: Extract<UploadSanitizeResult, { ok: false }>["code"]): UploadSanitizeResult => ({ ok: false, code, notes: [...state.notes] });
+
+    try {
+        if (new TextEncoder().encode(svg).byteLength > UPLOAD_LIMITS.maxBytes) return fail("too_large");
+        if (XMLValidator.validate(svg) !== true) return fail("not_svg");
+
+        const parser = new XMLParser({
+            preserveOrder: true,
+            ignoreAttributes: false,
+            attributeNamePrefix: "@_",
+            parseTagValue: false,
+            parseAttributeValue: false,
+            // Entities are never expanded, so DOCTYPE tricks (billion laughs) do nothing.
+            processEntities: false,
+            htmlEntities: false,
+            trimValues: true,
+            commentPropName: "#comment",
+        });
+        const document = parser.parse(svg) as XmlNode[];
+        const roots = document.filter((node) => {
+            const name = elementName(node);
+            return name && !name.startsWith("#") && !name.startsWith("?");
+        });
+        if (roots.length !== 1 || elementName(roots[0]) !== "svg") return fail("not_svg");
+
+        // SVG's initial paint: shapes are filled (black) and not stroked.
+        const rootPaint = inheritPaint(presentation(roots[0][":@"] ?? {}), { fill: true, stroke: false, visible: true });
+        const body = rootPaint ? walkUpload((roots[0].svg as XmlNode[]) ?? [], IDENTITY, rootPaint, 0, state) : "";
+        const { minX, minY, maxX, maxY } = state.bounds;
+        const longest = Math.max(maxX - minX, maxY - minY);
+        if (!body || state.bounds.empty || !(longest > 0)) return fail("empty");
+
+        const stroke = longest * 0.02;
+        const viewBox = [minX - stroke, minY - stroke, maxX - minX + 2 * stroke, maxY - minY + 2 * stroke].map(precise).join(" ");
+        return {
+            ok: true,
+            svg:
+                `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" fill="none" stroke="#111" ` +
+                `stroke-width="${precise(stroke)}" stroke-linecap="round" stroke-linejoin="round">` +
+                `${body.replace(STROKE_SLOT, (_, scale: string) => precise(stroke / Number(scale)))}</svg>`,
+            notes: [...state.notes],
+        };
+    } catch (error) {
+        if (error instanceof LimitRejection) return fail(error.code);
+        return fail("not_svg");
+    }
 }

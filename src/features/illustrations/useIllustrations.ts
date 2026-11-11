@@ -43,7 +43,14 @@ export function useIllustrations() {
     return { library, load, ensureLoaded };
 }
 
-/** Fetches an illustration's SVG and places it in the middle of the page. */
+/** Something to place on the page: a built-in illustration or an upload. */
+export interface PlaceableSvg {
+    id: string;
+    name: string;
+    url: string;
+}
+
+/** Fetches an illustration's (or upload's) SVG and places it in the middle of the page. */
 export function useInsertIllustration() {
     const canvasContext = useCanvas();
     const { setTool } = useEditor();
@@ -51,7 +58,7 @@ export function useInsertIllustration() {
     const [error, setError] = useState<string | null>(null);
 
     /** Resolves true once the illustration is on the page. */
-    const insert = async (illustration: Illustration) => {
+    const insert = async (illustration: PlaceableSvg) => {
         const { canvas, workspace } = canvasContext ?? {};
         if (!canvas || !workspace || inserting) return false;
 
@@ -59,7 +66,11 @@ export function useInsertIllustration() {
         setError(null);
         setTool("Select");
         try {
-            const response = await fetch(illustrationUrl(illustration.id));
+            const response = await fetch(illustration.url);
+            if (response.status === 404) {
+                setError(`“${illustration.name}” was removed on another device.`);
+                return false;
+            }
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             await addSvgToPage(canvas, workspace, await response.text());
             return true;

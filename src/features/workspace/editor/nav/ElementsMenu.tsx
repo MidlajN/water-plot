@@ -10,19 +10,22 @@ import {
     useInsertIllustration,
 } from "@/features/illustrations/useIllustrations";
 import type { Illustration } from "@/features/illustrations/library";
+import { pickSvgFiles, uploadUrl, useUploads, type Upload } from "@/features/uploads/UploadsContext";
+import { AddUploadTile, PendingTile, TileMotion, UPLOADS_HINT, UploadNotices, UploadTile } from "@/features/uploads/UploadsUI";
 import { useEditor, type DrawingElement } from "../EditorContext";
 import { SHAPES } from "./shapes";
 import { ACTIVE_COLOR, IDLE_COLOR, ToolHighlight, ToolTooltip, toolButtonClass } from "./toolbar";
 
 /**
- * Elements button: opens a dropdown with the drawing shapes and the illustration
- * library (served by /api/illustrations). Picking a shape arms the Elements tool;
- * picking an illustration places it in the middle of the page.
+ * Elements button: opens a dropdown with the drawing shapes, your uploads and the
+ * illustration library (served by /api/illustrations). Picking a shape arms the Elements
+ * tool; picking an illustration or upload places it in the middle of the page.
  */
 export function ElementsMenu() {
     const { tool, element, setTool, setElement } = useEditor();
     const { library, load: loadLibrary, ensureLoaded } = useIllustrations();
     const { inserting, error: insertError, insert, clearError } = useInsertIllustration();
+    const uploads = useUploads();
     const [open, setOpen] = useState(false);
     const containerRef = useRef<HTMLLIElement>(null);
     const reduceMotion = useReducedMotion();
@@ -31,7 +34,11 @@ export function ElementsMenu() {
     const current = SHAPES.find((shape) => shape.element === element) ?? SHAPES[1];
 
     const toggle = () => {
-        if (!open) ensureLoaded();
+        if (!open) {
+            ensureLoaded();
+            // Another device may have added or removed uploads.
+            void uploads.refresh();
+        }
         clearError();
         setOpen(!open);
     };
@@ -62,8 +69,23 @@ export function ElementsMenu() {
     };
 
     const insertIllustration = async (illustration: Illustration) => {
-        if (await insert(illustration)) setOpen(false);
+        if (await insert({ id: illustration.id, name: illustration.name, url: illustrationUrl(illustration.id) })) setOpen(false);
     };
+
+    const placeUpload = async (upload: Upload) => {
+        if (await insert({ id: upload.id, name: upload.name, url: uploadUrl(upload.id) })) setOpen(false);
+        else void uploads.refresh();
+    };
+
+    /** One file is placed right away (and the menu closes); several are only saved. */
+    const pickAndUpload = async () => {
+        const files = await pickSvgFiles();
+        if (!files.length) return;
+        const saved = await uploads.upload(files);
+        if (saved) await placeUpload(saved);
+    };
+
+    const uploadsEmpty = uploads.status === "ready" && !uploads.list.length && !uploads.pending.length;
 
     const highlighted = active || open;
 
@@ -118,6 +140,44 @@ export function ElementsMenu() {
                             </div>
                         </MenuSection>
 
+                        <MenuSection title="Your uploads">
+                            <div className="grid grid-cols-4 gap-1">
+                                <AnimatePresence initial={false} mode="popLayout">
+                                    <TileMotion key="add">
+                                        <AddUploadTile onPick={() => void pickAndUpload()} className="h-14 w-full rounded-xl" />
+                                    </TileMotion>
+                                    {uploads.pending.map((item) => (
+                                        <TileMotion key={`pending-${item.key}`}>
+                                            <PendingTile name={item.name} className="h-14 w-full rounded-xl" />
+                                        </TileMotion>
+                                    ))}
+                                    {uploads.list.map((upload) => (
+                                        <TileMotion key={upload.id}>
+                                            <UploadTile
+                                                upload={upload}
+                                                onPlace={(item) => void placeUpload(item)}
+                                                disabled={inserting !== null}
+                                                removal="hover"
+                                                itemRole="menuitem"
+                                                className="h-14 w-full rounded-xl p-1 hover:bg-ink/[0.05]"
+                                                imageClassName="h-11 w-11"
+                                            />
+                                        </TileMotion>
+                                    ))}
+                                </AnimatePresence>
+                            </div>
+                            {uploadsEmpty && <p className="type-caption mt-1.5 px-1 text-graphite">{UPLOADS_HINT}</p>}
+                            {uploads.status === "error" && !uploads.list.length && (
+                                <p className="type-caption mt-1.5 px-1 text-graphite">
+                                    Couldn&apos;t load your uploads.{" "}
+                                    <button type="button" onClick={() => void uploads.refresh()} className="font-semibold text-teal">
+                                        Retry
+                                    </button>
+                                </p>
+                            )}
+                            <UploadNotices className="mt-2 px-1" />
+                        </MenuSection>
+
                         {library.status === "loading" && <p className="type-footnote py-4 text-center text-graphite">Loading illustrations…</p>}
 
                         {library.status === "error" && (
@@ -147,8 +207,9 @@ export function ElementsMenu() {
                                                     onClick={() => void insertIllustration(item)}
                                                     className="press flex h-14 items-center justify-center rounded-xl p-1 outline-none hover:bg-ink/[0.05] focus-visible:ring-2 focus-visible:ring-teal disabled:opacity-50"
                                                 >
+                                                    {/* Drawn in black ink; inverted to white lines in dark mode. */}
                                                     {/* eslint-disable-next-line @next/next/no-img-element -- small SVG thumbnails from our own API */}
-                                                    <img src={illustrationUrl(item.id)} alt="" className="h-11 w-11 object-contain" />
+                                                    <img src={illustrationUrl(item.id)} alt="" className="h-11 w-11 object-contain dark:invert" />
                                                 </button>
                                             ))}
                                         </div>
