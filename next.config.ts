@@ -12,9 +12,9 @@ const nextConfig: NextConfig = {
     "/api/illustrations/*": ["./src/features/illustrations/library/**/*"],
   },
   // The database module's dynamic path makes Next trace the whole project; keep build
-  // output, agent skills and local data (plots, uploads, the database) out of the bundle.
+  // output, agent skills, local data (plots, uploads, the database) and tests out of the bundle.
   outputFileTracingExcludes: {
-    "/*": ["./dist/**/*", "./.claude/**/*", "./data/**/*"],
+    "/*": ["./dist/**/*", "./.claude/**/*", "./data/**/*", "./src/**/*.test.ts"],
   },
   turbopack: {
     rules: {

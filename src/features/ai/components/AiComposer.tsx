@@ -4,16 +4,17 @@ import { useRef, type KeyboardEvent } from "react";
 import { CircleNotch, Sparkle } from "@phosphor-icons/react";
 
 import { Tooltip } from "@/components/ui/tooltip";
-import { focusRing } from "../../desktop/parts";
+import { Segmented, focusRing } from "../../desktop/parts";
 import { CATEGORY_CHOICES, EXAMPLE_PROMPTS, useAiStudio } from "../AiStudioContext";
-import { LIMITS } from "../constants";
+import { ENGINE_LABELS, LIMITS, isImageEngine } from "../constants";
 
 /**
  * The AI Studio prompt card: the idea, the kind of design and Generate, with example
  * prompts underneath. `compact` is the phone layout (16 px text so iOS doesn't zoom).
  */
 export function AiComposer({ compact = false }: { compact?: boolean }) {
-    const { prompt, setPrompt, category, setCategory, busy, generate } = useAiStudio();
+    const { prompt, setPrompt, category, setCategory, engines, engine, setEngine, busy, generate } = useAiStudio();
+    const imageEngine = isImageEngine(engine);
     const field = useRef<HTMLTextAreaElement>(null);
     const generating = busy;
     const tooShort = prompt.trim().length < LIMITS.promptMin;
@@ -29,6 +30,8 @@ export function AiComposer({ compact = false }: { compact?: boolean }) {
 
     const applyExample = (example: (typeof EXAMPLE_PROMPTS)[number]) => {
         setPrompt(example.prompt);
+        // Image engines only make line art; other examples go back to the vector engine.
+        if (imageEngine && example.category !== "line_art") setEngine("vector");
         setCategory(example.category);
         field.current?.focus();
     };
@@ -60,6 +63,22 @@ export function AiComposer({ compact = false }: { compact?: boolean }) {
                     />
                 </label>
 
+                {engines.length > 1 && (
+                    <fieldset disabled={generating} className="space-y-1.5 disabled:opacity-50">
+                        <Segmented
+                            label="Engine"
+                            options={engines.map(({ id, label }) => ({ value: id, label }))}
+                            value={engine}
+                            onChange={setEngine}
+                        />
+                        {imageEngine && (
+                            <p className="type-caption px-1 text-graphite">
+                                {ENGINE_LABELS[engine]} draws a picture that&rsquo;s traced into pen strokes. Line art only.
+                            </p>
+                        )}
+                    </fieldset>
+                )}
+
                 <div role="radiogroup" aria-label="Kind of design" className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4">
                     {CATEGORY_CHOICES.map(({ id, label }) => (
                         <button
@@ -67,7 +86,7 @@ export function AiComposer({ compact = false }: { compact?: boolean }) {
                             type="button"
                             role="radio"
                             aria-checked={category === id}
-                            disabled={generating}
+                            disabled={generating || (imageEngine && id !== "line_art")}
                             onClick={() => setCategory(id)}
                             className={`press type-footnote h-8 shrink-0 rounded-full px-3.5 font-semibold disabled:opacity-50 ${focusRing} ${
                                 category === id ? "bg-teal text-on-accent" : "bg-grouped text-ink/75 hover:text-ink"

@@ -6,6 +6,7 @@ import { ArrowClockwise, CircleNotch, Question, Warning, X } from "@phosphor-ico
 
 import { focusRing } from "../../desktop/parts";
 import { useAiStudio, type StudioActivity } from "../AiStudioContext";
+import { ENGINE_LABELS, isImageEngine } from "../constants";
 import { DesignPreview } from "./DesignPreview";
 
 /** After this long, the waiting message explains that research can take a while. */
@@ -79,7 +80,9 @@ function Working({ activity, withSheet }: { activity: Extract<StudioActivity, { 
                 <p className="type-footnote flex items-start gap-2.5 text-ink">
                     <CircleNotch size={18} weight="bold" className="mt-px shrink-0 text-teal motion-safe:animate-spin" />
                     <span>
-                        <span className="font-semibold">{WORKING_LABEL[activity.action]}</span>
+                        <span className="font-semibold">
+                            {isImageEngine(activity.engine) ? `Drawing with ${ENGINE_LABELS[activity.engine]}, then tracing…` : WORKING_LABEL[activity.action]}
+                        </span>
                         {now - activity.startedAt > SLOW_AFTER_MS && (
                             <span className="block text-graphite">Busy moments can take up to a minute or two.</span>
                         )}

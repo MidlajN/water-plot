@@ -3,6 +3,22 @@
 export const DESIGN_CATEGORIES = ["poetry", "line_art", "combination", "custom"] as const;
 export type DesignCategory = (typeof DESIGN_CATEGORIES)[number];
 
+/**
+ * What makes the design: "vector" asks the language model for SVG directly (Gemini or
+ * Groq); the image engines draw a raster line drawing that's traced into pen strokes.
+ */
+export const DESIGN_ENGINES = ["vector", "flux", "openai"] as const;
+export type DesignEngine = (typeof DESIGN_ENGINES)[number];
+export type ImageEngine = Exclude<DesignEngine, "vector">;
+
+export const ENGINE_LABELS: Record<DesignEngine, string> = {
+    vector: "Vector AI",
+    flux: "FLUX",
+    openai: "OpenAI",
+};
+
+export const isImageEngine = (engine: DesignEngine): engine is ImageEngine => engine !== "vector";
+
 export const TEXT_FONTS = ["script", "sans", "serif"] as const;
 export type TextFont = (typeof TEXT_FONTS)[number];
 

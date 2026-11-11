@@ -1,8 +1,8 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type PropsWithChildren } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from "react";
 
-import { LIMITS, type DesignCategory } from "./constants";
+import { ENGINE_LABELS, LIMITS, isImageEngine, type DesignCategory, type DesignEngine } from "./constants";
 import type { Box, Design, DesignResponse, Source } from "./schema";
 
 export type CategoryChoice = DesignCategory | "auto";
@@ -29,6 +29,14 @@ export const EXAMPLE_PROMPTS: ReadonlyArray<{ prompt: string; category: Category
     { prompt: "A mountain illustration with a short quote", category: "combination" },
 ];
 
+export interface EngineChoice {
+    id: DesignEngine;
+    label: string;
+}
+
+/** Until the server says which image engines it has, only the vector engine is offered. */
+const VECTOR_ONLY: EngineChoice[] = [{ id: "vector", label: ENGINE_LABELS.vector }];
+
 export const REFINEMENT_SUGGESTIONS = ["Make it more minimal", "Simplify the lines", "Add more detail", "Increase the spacing"] as const;
 
 /** One generated design; Regenerate and Refine add new versions. */
@@ -39,6 +47,8 @@ export interface DesignVersion {
     /** The request it was made from (the original prompt for refinements). */
     prompt: string;
     category: CategoryChoice;
+    /** What drew it; Regenerate and Refine use the same engine. */
+    engine: DesignEngine;
     /** The refinement that produced it, if any. */
     refinement?: string;
 }
@@ -47,7 +57,7 @@ type Action = "generate" | "regenerate" | "refine";
 
 export type StudioActivity =
     | { status: "idle" }
-    | { status: "working"; action: Action; startedAt: number }
+    | { status: "working"; action: Action; startedAt: number; engine: DesignEngine }
     | { status: "clarification"; question: string; suggestions: string[] }
     | { status: "error"; action: Action; message: string; canRetry: boolean };
 
@@ -56,6 +66,11 @@ interface AiStudioValue {
     setPrompt: (prompt: string) => void;
     category: CategoryChoice;
     setCategory: (category: CategoryChoice) => void;
+    /** Engines this server offers (the vector engine, plus image engines with a key set). */
+    engines: EngineChoice[];
+    engine: DesignEngine;
+    /** Choosing an image engine also picks Line art, the only kind it makes. */
+    setEngine: (engine: DesignEngine) => void;
     activity: StudioActivity;
     busy: boolean;
     versions: DesignVersion[];
@@ -84,6 +99,7 @@ interface RequestBody {
     mode: "generate" | "refine";
     prompt: string;
     category: CategoryChoice;
+    engine: DesignEngine;
     refinement?: string;
     previous?: {
         title: string;
@@ -102,11 +118,34 @@ interface RequestBody {
 export function AiStudioProvider({ children }: PropsWithChildren) {
     const [prompt, setPrompt] = useState("");
     const [category, setCategory] = useState<CategoryChoice>("auto");
+    const [engines, setEngines] = useState<EngineChoice[]>(VECTOR_ONLY);
+    const [engine, setEngineState] = useState<DesignEngine>("vector");
     const [activity, setActivity] = useState<StudioActivity>({ status: "idle" });
     const [versions, setVersions] = useState<DesignVersion[]>([]);
     const [index, setIndex] = useState(0);
     const controller = useRef<AbortController | null>(null);
     const lastRequest = useRef<{ action: Action; body: RequestBody; refinement?: string } | null>(null);
+
+    useEffect(() => {
+        const abort = new AbortController();
+        fetch("/api/ai/engines", { signal: abort.signal })
+            .then((response) => (response.ok ? response.json() : null))
+            .then((body: { engines?: EngineChoice[] } | null) => {
+                const listed = body?.engines?.filter((choice) => choice.id in ENGINE_LABELS);
+                if (!listed?.length) return;
+                setEngines(listed);
+                setEngineState((current) => (listed.some((choice) => choice.id === current) ? current : "vector"));
+            })
+            .catch(() => {
+                // Offline or aborted: keep the vector engine only.
+            });
+        return () => abort.abort();
+    }, []);
+
+    const setEngine = useCallback((next: DesignEngine) => {
+        setEngineState(next);
+        if (isImageEngine(next)) setCategory("line_art");
+    }, []);
 
     const run = useCallback(async (action: Action, body: RequestBody, refinement?: string) => {
         if (controller.current) return; // one request at a time
@@ -114,7 +153,7 @@ export function AiStudioProvider({ children }: PropsWithChildren) {
         const abort = new AbortController();
         controller.current = abort;
         const timeout = setTimeout(() => abort.abort("timeout"), CLIENT_TIMEOUT_MS);
-        setActivity({ status: "working", action, startedAt: Date.now() });
+        setActivity({ status: "working", action, startedAt: Date.now(), engine: body.engine });
 
         const fail = (message: string) => setActivity({ status: "error", action, message, canRetry: true });
 
@@ -135,6 +174,7 @@ export function AiStudioProvider({ children }: PropsWithChildren) {
                     usedWebSearch: result.usedWebSearch,
                     prompt: body.prompt,
                     category: body.category,
+                    engine: result.engine ?? body.engine,
                     refinement,
                 };
                 setVersions((current) => {
@@ -164,16 +204,16 @@ export function AiStudioProvider({ children }: PropsWithChildren) {
                 setActivity({ status: "error", action: "generate", message: "Describe your idea in a few words first.", canRetry: false });
                 return;
             }
-            await run("generate", { mode: "generate", prompt: text, category });
+            await run("generate", { mode: "generate", prompt: text, category: isImageEngine(engine) ? "line_art" : category, engine });
         },
-        [prompt, category, run],
+        [prompt, category, engine, run],
     );
 
     const current = versions[index] ?? null;
 
     const regenerate = useCallback(async () => {
         if (!current) return;
-        await run("regenerate", { mode: "generate", prompt: current.prompt, category: current.category });
+        await run("regenerate", { mode: "generate", prompt: current.prompt, category: current.category, engine: current.engine });
     }, [current, run]);
 
     const refine = useCallback(
@@ -187,12 +227,14 @@ export function AiStudioProvider({ children }: PropsWithChildren) {
                     mode: "refine",
                     prompt: current.prompt,
                     category: current.category,
+                    engine: current.engine,
                     refinement: instruction,
                     previous: {
                         title: design.title,
                         category: design.category,
                         text: design.text ? { lines: design.text.lines, font: design.text.font, box: design.text.box } : null,
-                        illustration: design.illustration,
+                        // An image engine draws the refined idea afresh, so the old SVG isn't sent.
+                        illustration: isImageEngine(current.engine) ? null : design.illustration,
                     },
                 },
                 instruction,
@@ -215,6 +257,9 @@ export function AiStudioProvider({ children }: PropsWithChildren) {
             setPrompt,
             category,
             setCategory,
+            engines,
+            engine,
+            setEngine,
             activity,
             busy: activity.status === "working",
             versions,
@@ -228,7 +273,7 @@ export function AiStudioProvider({ children }: PropsWithChildren) {
             cancel,
             dismiss,
         }),
-        [prompt, category, activity, versions, index, current, showVersion, generate, regenerate, refine, retry, cancel, dismiss],
+        [prompt, category, engines, engine, setEngine, activity, versions, index, current, showVersion, generate, regenerate, refine, retry, cancel, dismiss],
     );
 
     return <AiStudioContext.Provider value={value}>{children}</AiStudioContext.Provider>;

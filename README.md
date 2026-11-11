@@ -100,6 +100,8 @@ Settings live in `.env`. The worker reads only `.env`; Next.js reads `.env` and
 | `PLOTTER_PARK_X`, `PLOTTER_PARK_Y` | `0`, `0` | Where the pen goes after every plot, in mm, in the same coordinates as the drawing. The pen lifts to travel height first. |
 | `PLOTTER_PARK` | on | `false` leaves the pen over the last stroke instead of parking. |
 | `PLOTTER_MIRROR` | off | `true` flips every plot left–right across the 690 mm page, for drawing on the back of glass that is read from the other side. It covers Plot, Auto plots and uploaded `.gcode` files. Download G-code stays unmirrored, so a downloaded file is mirrored once when it's plotted. The park position isn't mirrored. |
+| `PLOTTER_BRIDGE_MM` | `1` | Pen-path optimiser: gaps up to this many mm are drawn with the pen down instead of lifting. `0` adds no ink at all. |
+| `PLOTTER_OPTIMIZE` | on | `false` turns the pen-path optimiser off and keeps svg-to-gcode's own stroke order. |
 | `AI_PROVIDER` | `gemini` | Which AI service AI Creative Studio uses: `gemini` or `groq`. Only the chosen provider's settings are needed. |
 | `GEMINI_API_KEY` | none | Google Gemini API key, from Google AI Studio. Server-side only. Needed when `AI_PROVIDER=gemini`. |
 | `GEMINI_MODEL` | `gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite` | Gemini model, or a comma-separated list tried in order: when one is busy (503), out of requests (429), not served (404) or slow (no answer in 45 s) the next answers. The default list is stable free-tier Flash and Flash-Lite models with separate quotas, about 20 requests a day each on the Free Tier. Not usable: Pro and Argon (no free quota), `gemini-3.5-flash` (shares 3.6's quota) and preview models (not served by the SDK's stable API). |
@@ -108,6 +110,12 @@ Settings live in `.env`. The worker reads only `.env`; Next.js reads `.env` and
 | `GROQ_MODEL` | none | Groq model for designs (only for `AI_PROVIDER=groq`). It needs strict structured output, and Groq's built-in `browser_search` tool if web search is on. `openai/gpt-oss-120b` (or `openai/gpt-oss-20b`) supports both. |
 | `AI_MAX_OUTPUT_TOKENS` | none | Token limit for a design response, thinking included. Gemini 3 Flash can spend 4,000–7,000 tokens thinking before it draws, so use `16000`. |
 | `AI_ENABLE_WEB_SEARCH` | `false` | `true` lets prompts that need real-world or current facts run a web research step first. Keep it `false` on the Gemini Free Tier, which doesn't include Google Search. |
+| `POLLINATIONS_API_KEY` | none | Turns on the FLUX image engine. A secret `sk_` key from Pollinations; server-side only. |
+| `POLLINATIONS_IMAGE_MODEL` | `flux` | Pollinations image model. |
+| `OPENAI_API_KEY` | none | Turns on the OpenAI image engine. Server-side only. Billed per token. |
+| `OPENAI_IMAGE_MODEL` | `gpt-image-2.6-flare` | OpenAI image model (a gpt-image model; DALL·E is retired). |
+| `OPENAI_IMAGE_QUALITY` | `low` | `low`, `medium`, `high`, `xhigh`, `max` or `auto`. Higher costs more. |
+| `OPENAI_IMAGE_COMPLEXITY` | `low` | `low`, `medium` or `high` (simpler pictures trace better), or `none` to leave it out. |
 | `AI_SVG_WIDTH_MM`, `AI_SVG_HEIGHT_MM` | none | Working area generated designs are fitted to, in mm (`690` × `290`). |
 
 `next dev` reloads `.env` when it changes. The worker doesn't, so restart `pnpm worker`
@@ -196,6 +204,16 @@ G-code, Auto plots and uploaded `.gcode` files. The step:
 The gateway enforces the Z feed limit as well. To change the heights or the drawing
 speed, edit `PLOTTER_PROFILE` in `src/features/plotter/profile.ts`.
 
+### Pen path
+
+G-code made from a drawing (Plot, Download G-code, Auto plots, AI designs) is reordered
+before the safety step by `src/features/export/pathOptimizer.ts`, which works on the
+converted strokes in mm. Strokes can be drawn in either direction, closed shapes can start
+at any point, and the order starts from the park position (nearest neighbour, then 2-opt),
+so the pen spends less time travelling. Gaps up to `PLOTTER_BRIDGE_MM` (default 1 mm) are
+drawn with the pen down instead of lifting. Every drawn line is kept. Uploaded `.gcode`
+files are left in their own order.
+
 ### What the gateway must provide
 
 **REST** (JSON bodies, port 8080):
@@ -208,10 +226,13 @@ speed, edit `PLOTTER_PROFILE` in `src/features/plotter/profile.ts`.
 | `POST /api/control/resume` | `{}` | `{ "status": "running" }`, sends `~` |
 | `POST /api/control/abort` | `{}` | `{ "status": "aborted" }`, sends Ctrl-X |
 | `POST /api/control/jog` | `{ "x"?, "y"?, "z"?, "feed" }` | `{ "status": "jogging" }`, sends `$J=G91 G21 …` |
+| `POST /api/control/unlock` | `{}` | `{ "status": "unlocked" }`, sends `$X` |
+| `POST /api/control/home` | `{}` | `{ "status": "homing" }`, starts `$H` (telemetry shows `Home` while it runs) |
 | `GET /api/status` | none | `{ "state", "mpos": [x, y, z], "job" }` |
 
-Errors should come back with an HTTP error status and a JSON `{ "error": "…" }`. The app
-shows that message to the user.
+Errors should come back with an HTTP error status and a JSON `{ "error": "…" }`. A reply
+of `{ "success": false, "message": "…" }` counts as an error too, whatever its status. The
+app shows that message to the user.
 
 **WebSocket** `ws://<pi>:8080/ws`: JSON messages shaped `{ "type": …, "data": … }`.
 
@@ -270,7 +291,9 @@ the Auto mode preview.
 - **Current plot.** Progress, lines done, time left, Pause/Resume and Abort. Abort asks
   for a second click.
 - **Machine.** Live position and feed, and a jog pad with step sizes of 0.1, 1 and 10 mm.
-  Jogging is off while a plot runs.
+  Jogging is off while a plot runs. **Home** runs the homing cycle (`$H`); **Unlock**
+  clears an alarm (`$X`). Both work during an alarm, when jogging doesn't. The phone
+  has them under the joystick.
 - **Activity.** Recent events since the page opened.
 - **Auto mode.** The time zone used for the clock, and the recent plots with their
   status. Click one to preview it; *Plot again* sends it to the plotter.
@@ -349,6 +372,33 @@ with either.
   Free Tier has none: then the design runs without research (no sources) and the
   server logs a warning.
 
+### Image engines: FLUX and OpenAI
+
+Besides the language model's own SVG ("Vector AI"), AI Studio can draw with an image
+model and trace the picture into pen strokes. Each engine appears in the composer's
+engine picker once its key is set; with no image keys the picker stays hidden.
+
+- **FLUX** through Pollinations (`POLLINATIONS_API_KEY`, a secret `sk_` key;
+  Pollinations refuses `pk_` keys for API calls). Spends Pollen credits.
+- **OpenAI** gpt-image (`OPENAI_API_KEY`, default model `gpt-image-2.6-flare`). Billed
+  per token, so keep `OPENAI_IMAGE_QUALITY=low` unless you need more. DALL·E 3 was
+  retired from the API in May 2026 and can't be used.
+- **Line art only.** Picking an image engine selects Line art; poems and combinations
+  stay with Vector AI. Regenerate makes a new picture; Refine draws the idea again with
+  the change added to the prompt. There's no silent fallback to Vector AI.
+- **How it's traced.** The idea goes into a fixed line-art prompt (a minimalist ink
+  drawing, isolated on white). It only describes what to draw: image models tend to
+  draw whatever a prompt names, even after "no". The 1024 px image is traced along the
+  middle of each line, so every drawn line becomes one pen stroke rather than an outline
+  around both edges: a threshold set a little towards paper from Otsu's (so fine lines
+  like whiskers survive), speck and pinhole clean-up, Zhang–Suen
+  thinning, a skeleton graph with short spurs pruned and lines joined straight through
+  junctions, then smoothing, Douglas–Peucker simplification and Bézier curves. Small
+  separate marks (windows, pupils) are kept, and dots become tiny circles. The result goes through the same SVG
+  sanitizer as every other design, simplified harder if it would be too large.
+- **Keys stay on the server**, sent only in `Authorization` headers.
+  `GET /api/ai/engines` tells the browser which engines exist, never their settings.
+
 ## App API
 
 The browser uses these routes. You can also call them from scripts.
@@ -359,13 +409,14 @@ The browser uses these routes. You can also call them from scripts.
 | `GET /api/plotter/events` | Server-Sent Events: `snapshot`, then `telemetry`, `job_progress`, `job_complete` and `link` (`{ connected }`) |
 | `POST /api/plotter/jobs?start=1&name=…` | Plots an SVG (`Content-Type: image/svg+xml`) or G-code (`text/plain`). Returns 409 if the plotter is busy. |
 | `POST /api/plotter/jobs/start` | `{ jobId }`: starts an uploaded job |
-| `POST /api/plotter/control/hold`, `/resume`, `/abort` | Real-time control |
+| `POST /api/plotter/control/hold`, `/resume`, `/abort`, `/unlock`, `/home` | Machine control (`/unlock` sends `$X`, `/home` starts `$H`) |
 | `POST /api/plotter/control/jog` | `{ x?, y?, z?, feed }` in mm. Any jog that moves Z is held to F1000. |
 | `GET /api/auto` and `PUT /api/auto` | Auto mode settings: `{ enabled, timezone }` |
 | `GET /api/auto/jobs?limit=20` | Recent Auto mode plots |
 | `GET /api/auto/jobs/:id/svg` | A plot's SVG |
+| `GET /api/ai/engines` | `{ engines: [{ id, label }] }`: Vector AI plus each image engine with a key set |
 | `POST /api/export/svg`, `POST /api/export/gcode` | Returns the posted SVG unchanged, or converted to G-code |
-| `POST /api/ai/design` | AI Creative Studio. `{ mode: "generate" \| "refine", prompt, category?, refinement?, previous? }` returns a validated design (sanitized 690 × 290 mm SVG and/or text lines for the single-line fonts), a clarification question, or an error |
+| `POST /api/ai/design` | AI Creative Studio. `{ mode: "generate" \| "refine", prompt, category?, engine?, refinement?, previous? }` (`engine`: `vector` default, `flux` or `openai`) returns a validated design (sanitized 690 × 290 mm SVG and/or text lines for the single-line fonts), a clarification question, or an error |
 
 Example: plot an SVG file from the command line.
 
@@ -520,6 +571,7 @@ src/features/desktop/   Desktop sidebar
 src/features/mobile/    Phone layout (bottom card, joystick, text input)
 src/features/workspace/ Canvas editor and single-line text
 src/features/auto/      Auto mode settings and job history
+src/features/ai/        AI Studio: providers, image engines (images/), centerline tracer (trace/), SVG sanitizer
 src/lib/db/             SQLite schema and connection (Drizzle)
 worker/                 Auto mode scheduler and plot sender
 scripts/                Mock gateway, font build tools, Pi bundle build, migrations

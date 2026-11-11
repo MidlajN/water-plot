@@ -49,9 +49,15 @@ interface PlotterContextValue {
     error: string | null;
     /** Recent plotter events since the page opened, newest first. */
     activity: ActivityEntry[];
-    /** Machine is running something or a job is active. */
+    /** Machine is running something or a job is active (also true during an alarm). */
     busy: boolean;
     held: boolean;
+    /** Machine is in alarm and needs Unlock or Home. */
+    alarm: boolean;
+    /** Homing is allowed: connected, no plot running, machine Idle or in alarm. */
+    canHome: boolean;
+    /** Unlock is allowed: connected and no plot running. */
+    canUnlock: boolean;
     /** Plots the current page. */
     send: () => Promise<void>;
     /** Plots an SVG document (e.g. an Auto plot). */
@@ -61,6 +67,10 @@ interface PlotterContextValue {
     hold: () => Promise<void>;
     resume: () => Promise<void>;
     abort: () => Promise<void>;
+    /** Clears an alarm (`$X`). */
+    unlock: () => Promise<void>;
+    /** Runs the homing cycle (`$H`). */
+    home: () => Promise<void>;
     jog: (move: { x?: number; y?: number; z?: number; feed: number }) => Promise<void>;
     /** Hides a finished job and clears the error. */
     dismiss: () => void;
@@ -192,6 +202,10 @@ export function PlotterProvider({ children }: PropsWithChildren) {
                 const { connected } = JSON.parse((event as MessageEvent).data);
                 setGateway(connected);
                 if (!connected) {
+                    // Drop telemetry still waiting to render, or it would bring back the stale state.
+                    pendingTelemetry.current = null;
+                    if (telemetryTimer.current !== null) clearTimeout(telemetryTimer.current);
+                    telemetryTimer.current = null;
                     machineStateRef.current = null;
                     setTelemetry(null);
                 }
@@ -267,11 +281,13 @@ export function PlotterProvider({ children }: PropsWithChildren) {
         input.click();
     }, [startJob]);
 
-    const control = useCallback(async (action: "hold" | "resume" | "abort") => {
+    const control = useCallback(async (action: "hold" | "resume" | "abort" | "unlock" | "home") => {
         setError(null);
         try {
             await postJson(`/api/plotter/control/${action}`);
-            if (action === "abort" && jobIdRef.current) {
+            if (action === "unlock") logEvent("info", "Alarm cleared ($X)");
+            else if (action === "home") logEvent("info", "Homing started ($H)");
+            else if (action === "abort" && jobIdRef.current) {
                 // The spec doesn't promise a job_complete after an abort.
                 logEvent("warn", "Plot aborted");
                 jobIdRef.current = null;
@@ -308,6 +324,10 @@ export function PlotterProvider({ children }: PropsWithChildren) {
 
     const held = telemetry?.state.startsWith("Hold") ?? false;
     const busy = job?.phase === "running" || (telemetry !== null && telemetry.state !== "Idle");
+    const alarm = telemetry?.state === "Alarm";
+    // Not gated on `busy`, which is true during an alarm: that's when these are needed.
+    const canUnlock = gatewayConnected && telemetry !== null && job?.phase !== "running";
+    const canHome = canUnlock && (telemetry?.state === "Idle" || alarm);
 
     const value = useMemo<PlotterContextValue>(
         () => ({
@@ -321,16 +341,41 @@ export function PlotterProvider({ children }: PropsWithChildren) {
             activity,
             busy,
             held,
+            alarm,
+            canHome,
+            canUnlock,
             send,
             sendSvg,
             pickFile,
             hold: () => control("hold"),
             resume: () => control("resume"),
             abort: () => control("abort"),
+            unlock: () => control("unlock"),
+            home: () => control("home"),
             jog,
             dismiss,
         }),
-        [link, gatewayConnected, telemetry, progress, job, sending, error, activity, busy, held, send, sendSvg, pickFile, control, jog, dismiss],
+        [
+            link,
+            gatewayConnected,
+            telemetry,
+            progress,
+            job,
+            sending,
+            error,
+            activity,
+            busy,
+            held,
+            alarm,
+            canHome,
+            canUnlock,
+            send,
+            sendSvg,
+            pickFile,
+            control,
+            jog,
+            dismiss,
+        ],
     );
 
     return <PlotterContext.Provider value={value}>{children}</PlotterContext.Provider>;

@@ -10,6 +10,14 @@ import {
     plotterMirror,
     plotterParkPosition,
 } from "../plotter/profile";
+import {
+    describeStats,
+    optimizeGcode,
+    penStartPoint,
+    plotterBridgeMm,
+    plotterOptimize,
+    type OptimizeStats,
+} from "./pathOptimizer";
 
 export interface GcodeResult {
     gcode: string;
@@ -17,6 +25,8 @@ export interface GcodeResult {
     time: number;
     /** Number of G-code lines (what the gateway streams). */
     lines: number;
+    /** What the pen-path optimiser did, when it ran. */
+    optimization?: OptimizeStats;
 }
 
 export interface GcodeOptions {
@@ -85,9 +95,11 @@ function finish(gcode: string, settings: ConverterSettings, mirrorAxis: number |
 
 /**
  * Converts an SVG (user units read as 96 dpi px) to plotter-safe G-code using the
- * plotter profile, with optional setting overrides. The program ends with the pen
- * parked (see plotterParkPosition). With `forPlotter` and PLOTTER_MIRROR on, the page
- * is mirrored left–right.
+ * plotter profile, with optional setting overrides. Strokes are reordered for less
+ * pen-up travel, with gaps up to PLOTTER_BRIDGE_MM drawn pen-down (see pathOptimizer;
+ * PLOTTER_OPTIMIZE=false turns it off). The program ends with the pen parked (see
+ * plotterParkPosition). With `forPlotter` and PLOTTER_MIRROR on, the page is mirrored
+ * left–right.
  */
 export async function convertSvgToGcode(
     svg: string,
@@ -97,9 +109,25 @@ export async function convertSvgToGcode(
     const settings = { ...plotterConverterSettings(), ...overrides };
     const result = await new Converter(settings).convert(svg);
     const mirrorAxis = forPlotter && plotterMirror() ? svgMirrorAxis(svg, settings) : null;
-    const gcode = finish(result.gcode, settings, mirrorAxis);
 
-    return { gcode, time: result.time, lines: countLines(gcode) };
+    let raw = result.gcode;
+    let time = result.time;
+    let optimization: OptimizeStats | undefined;
+    if (plotterOptimize()) {
+        const bridgeMm = plotterBridgeMm();
+        // Optimised before finish(), so the start point is mapped into pre-mirror space.
+        const optimized = optimizeGcode(raw, { settings, bridgeMm, start: penStartPoint(plotterParkPosition(), mirrorAxis) });
+        if (optimized.optimized) {
+            ({ gcode: raw, time } = optimized);
+            optimization = optimized.stats;
+            console.info(describeStats(optimized.stats, bridgeMm));
+        } else {
+            console.info(`[pathOptimizer] skipped: ${optimized.reason}`);
+        }
+    }
+
+    const gcode = finish(raw, settings, mirrorAxis);
+    return { gcode, time, lines: countLines(gcode), optimization };
 }
 
 /**

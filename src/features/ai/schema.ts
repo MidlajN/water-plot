@@ -5,7 +5,7 @@ import { z } from "zod";
  * may send, and what the API answers. Shared by server and client (no secrets here).
  */
 
-import { DESIGN_CATEGORIES, LIMITS, TEXT_FONTS, type DesignCategory } from "./constants";
+import { DESIGN_CATEGORIES, DESIGN_ENGINES, LIMITS, TEXT_FONTS, type DesignCategory, type DesignEngine } from "./constants";
 
 export { DESIGN_CATEGORIES, FONT_IDS, LIMITS, TEXT_FONTS, type DesignCategory, type TextFont } from "./constants";
 
@@ -137,6 +137,8 @@ export const DesignRequestSchema = z
         mode: z.enum(["generate", "refine"]),
         prompt: z.string().trim().min(LIMITS.promptMin).max(LIMITS.promptMax),
         category: z.enum([...DESIGN_CATEGORIES, "auto"]).default("auto"),
+        /** What draws it: the language model's own SVG, or a traced FLUX / OpenAI image (line art only). */
+        engine: z.enum(DESIGN_ENGINES).default("vector"),
         refinement: z.string().trim().min(1).max(LIMITS.refinementMax).optional(),
         previous: PreviousDesignSchema.optional(),
     })
@@ -166,6 +168,6 @@ export interface Source {
 }
 
 export type DesignResponse =
-    | { status: "success"; design: Design; sources: Source[]; usedWebSearch: boolean }
+    | { status: "success"; design: Design; sources: Source[]; usedWebSearch: boolean; engine: DesignEngine }
     | { status: "needs_clarification"; clarification: { question: string; suggestions: string[] }; usedWebSearch: boolean }
     | { status: "error"; error: string };

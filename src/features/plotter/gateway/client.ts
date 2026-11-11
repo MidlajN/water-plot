@@ -56,6 +56,10 @@ async function request<T>(path: string, init: RequestInit = {}, timeout = REQUES
         throw new GatewayError(String(message), response.status >= 500 ? 502 : response.status);
     }
     if (body === null) throw new GatewayError("The plotter sent an invalid response.", 502);
+    // The gateway reports a refused command as HTTP 200 with { success: false, message }.
+    if (body?.success === false) {
+        throw new GatewayError(String(body.message ?? body.error ?? "The plotter refused the command."), 502);
+    }
 
     return body as T;
 }
@@ -77,6 +81,12 @@ export const resume = () => post<{ status: string }>("/api/control/resume");
 
 /** Abort and reset (Ctrl-X). */
 export const abort = () => post<{ status: string }>("/api/control/abort");
+
+/** Clear an alarm (`$X`). */
+export const unlock = () => post<{ status: string }>("/api/control/unlock");
+
+/** Run the homing cycle (`$H`). Returns once started; telemetry shows `Home` while it runs. */
+export const home = () => post<{ status: string }>("/api/control/home");
 
 export const jog = (move: JogRequest) => post<{ status: string }>("/api/control/jog", move);
 

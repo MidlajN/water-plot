@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "@phosphor-icons/react";
+import { House, LockOpen, X } from "@phosphor-icons/react";
 import type { Canvas as FabricCanvas, FabricObject, Point } from "fabric";
 
+import { usePlotter } from "../plotter/PlotterContext";
 import useCanvas, { type WorkspaceInstance } from "../workspace/canvas/CanvasContext";
 
 /*
@@ -18,6 +19,8 @@ import useCanvas, { type WorkspaceInstance } from "../workspace/canvas/CanvasCon
  *   tap the knob once more (press and let go without pushing). Letting go of the
  *   double-tap itself without pushing keeps the picker open. You can also tap a sector
  *   in the panel, or × to cancel.
+ *
+ * Under it sit the plotter's Home ($H) and Unlock ($X) buttons.
  */
 
 const KNOB_TRAVEL = 34; // px the knob can move from the centre
@@ -292,71 +295,101 @@ export function Joystick() {
                 </div>
             )}
 
-            <div className="fixed bottom-[calc(50dvh+16px)] right-4 z-30 flex items-end gap-2">
-                <AnimatePresence>
-                    {pickerOpen && (
-                        <motion.div
-                            role="dialog"
-                            aria-label="Move to sector"
-                            className="material-float w-40 origin-right rounded-2xl p-1.5"
-                            initial={{ opacity: 0, x: 8, scale: 0.95 }}
-                            animate={{ opacity: 1, x: 0, scale: 1 }}
-                            exit={{ opacity: 0, x: 8, scale: 0.95 }}
-                            transition={{ duration: 0.15 }}
-                        >
-                            <div className="flex items-center justify-between gap-1 pb-1 pl-1">
-                                <p className="type-caption truncate font-semibold text-graphite">
-                                    {pointed ? SECTOR_LABELS[pointed] : "Pick a sector"}
-                                </p>
-                                <button
-                                    type="button"
-                                    aria-label="Cancel"
-                                    onClick={() => setPickerOpen(false)}
-                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-graphite outline-none active:bg-ink/[0.06] focus-visible:ring-2 focus-visible:ring-focus"
-                                >
-                                    <X size={14} weight="bold" />
-                                </button>
-                            </div>
-                            <div className="grid grid-cols-3 gap-1">
-                                {GRID.map((sector) => (
+            <div className="fixed bottom-[calc(50dvh+16px)] right-4 z-30 flex flex-col items-end gap-2">
+                <div className="flex items-end gap-2">
+                    <AnimatePresence>
+                        {pickerOpen && (
+                            <motion.div
+                                role="dialog"
+                                aria-label="Move to sector"
+                                className="material-float w-40 origin-right rounded-2xl p-1.5"
+                                initial={{ opacity: 0, x: 8, scale: 0.95 }}
+                                animate={{ opacity: 1, x: 0, scale: 1 }}
+                                exit={{ opacity: 0, x: 8, scale: 0.95 }}
+                                transition={{ duration: 0.15 }}
+                            >
+                                <div className="flex items-center justify-between gap-1 pb-1 pl-1">
+                                    <p className="type-caption truncate font-semibold text-graphite">
+                                        {pointed ? SECTOR_LABELS[pointed] : "Pick a sector"}
+                                    </p>
                                     <button
-                                        key={sector}
                                         type="button"
-                                        aria-label={`Move to ${SECTOR_LABELS[sector].toLowerCase()}`}
-                                        onClick={() => choose(sector)}
-                                        className={`h-8 rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus ${sector === pointed ? "bg-teal" : "bg-ink/[0.06] active:bg-ink/[0.1]"}`}
-                                    />
-                                ))}
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                                        aria-label="Cancel"
+                                        onClick={() => setPickerOpen(false)}
+                                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-graphite outline-none active:bg-ink/[0.06] focus-visible:ring-2 focus-visible:ring-focus"
+                                    >
+                                        <X size={14} weight="bold" />
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-3 gap-1">
+                                    {GRID.map((sector) => (
+                                        <button
+                                            key={sector}
+                                            type="button"
+                                            aria-label={`Move to ${SECTOR_LABELS[sector].toLowerCase()}`}
+                                            onClick={() => choose(sector)}
+                                            className={`h-8 rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus ${sector === pointed ? "bg-teal" : "bg-ink/[0.06] active:bg-ink/[0.1]"}`}
+                                        />
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
-                <div
-                    role="group"
-                    aria-label="Move selection joystick. Double-tap to pick one of 9 sectors."
-                    aria-disabled={!hasSelection}
-                    onPointerDown={onPointerDown}
-                    onPointerMove={onPointerMove}
-                    onPointerUp={onPointerUp}
-                    onPointerCancel={onPointerUp}
-                    className={`material-float relative flex h-24 w-24 touch-none select-none items-center justify-center rounded-full transition-opacity ${
-                        pickerOpen ? "ring-2 ring-teal" : ""
-                    } ${hasSelection ? "opacity-100" : "opacity-45"}`}
-                >
-                    {/* Direction ticks */}
-                    {["top-1.5 left-1/2 -translate-x-1/2", "bottom-1.5 left-1/2 -translate-x-1/2", "left-1.5 top-1/2 -translate-y-1/2", "right-1.5 top-1/2 -translate-y-1/2"].map(
-                        (position) => (
-                            <span key={position} aria-hidden className={`absolute h-1.5 w-1.5 rounded-full bg-ink/15 ${position}`} />
-                        ),
-                    )}
                     <div
-                        ref={knobRef}
-                        aria-hidden
-                        className={`h-11 w-11 rounded-full shadow-[0_2px_8px_rgb(0_0_0/0.25)] transition-[background-color] ${pickerOpen ? "bg-teal" : "bg-ink"}`}
-                    />
+                        role="group"
+                        aria-label="Move selection joystick. Double-tap to pick one of 9 sectors."
+                        aria-disabled={!hasSelection}
+                        onPointerDown={onPointerDown}
+                        onPointerMove={onPointerMove}
+                        onPointerUp={onPointerUp}
+                        onPointerCancel={onPointerUp}
+                        className={`material-float relative flex h-24 w-24 touch-none select-none items-center justify-center rounded-full transition-opacity ${
+                            pickerOpen ? "ring-2 ring-teal" : ""
+                        } ${hasSelection ? "opacity-100" : "opacity-45"}`}
+                    >
+                        {/* Direction ticks */}
+                        {["top-1.5 left-1/2 -translate-x-1/2", "bottom-1.5 left-1/2 -translate-x-1/2", "left-1.5 top-1/2 -translate-y-1/2", "right-1.5 top-1/2 -translate-y-1/2"].map(
+                            (position) => (
+                                <span key={position} aria-hidden className={`absolute h-1.5 w-1.5 rounded-full bg-ink/15 ${position}`} />
+                            ),
+                        )}
+                        <div
+                            ref={knobRef}
+                            aria-hidden
+                            className={`h-11 w-11 rounded-full shadow-[0_2px_8px_rgb(0_0_0/0.25)] transition-[background-color] ${pickerOpen ? "bg-teal" : "bg-ink"}`}
+                        />
+                    </div>
                 </div>
+
+                <MachineButtons />
             </div>
         </>
+    );
+}
+
+/** Home ($H) and Unlock ($X), with the same rules as the desktop machine panel. */
+function MachineButtons() {
+    const { alarm, canHome, canUnlock, home, unlock } = usePlotter();
+    const base =
+        "press material-float type-caption flex h-9 items-center justify-center gap-1.5 rounded-full px-3 font-semibold outline-none focus-visible:ring-2 focus-visible:ring-teal disabled:opacity-45";
+
+    return (
+        <div role="group" aria-label="Machine" className="grid grid-cols-2 gap-1.5">
+            <button type="button" title="Run the homing cycle ($H)" disabled={!canHome} onClick={() => void home()} className={`${base} text-ink`}>
+                <House size={14} weight="bold" />
+                Home
+            </button>
+            <button
+                type="button"
+                title="Clear the alarm ($X)"
+                disabled={!canUnlock}
+                onClick={() => void unlock()}
+                className={`${base} ${alarm ? "text-caution ring-1 ring-caution/50" : "text-ink"}`}
+            >
+                <LockOpen size={14} weight="bold" />
+                Unlock
+            </button>
+        </div>
     );
 }

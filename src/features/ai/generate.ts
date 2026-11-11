@@ -1,6 +1,8 @@
 import "server-only";
 
 import { AiConfigError, getAiConfig, type AiConfig } from "./config";
+import { isImageEngine } from "./constants";
+import { createImageDesign } from "./imageDesign";
 import { buildInput, buildInstructions, buildRepairInput } from "./prompts";
 import { createGeminiProvider } from "./providers/gemini";
 import { createGroqProvider } from "./providers/groq";
@@ -47,14 +49,18 @@ function mapProviderError(error: unknown, provider: DesignProvider | null): Desi
 }
 
 /**
- * Generates (or refines) a design: an optional web research step, one structured call
- * to the configured provider (Gemini or Groq), validation, and SVG sanitization, with
- * one repair attempt if the SVG is rejected. Returns the response body and the HTTP status to send.
+ * Generates (or refines) a design. With the vector engine: an optional web research step,
+ * one structured call to the configured provider (Gemini or Groq), validation, and SVG
+ * sanitization, with one repair attempt if the SVG is rejected. With an image engine
+ * (FLUX or OpenAI): a traced line drawing (see createImageDesign); it never falls back
+ * to the vector engine. Returns the response body and the HTTP status to send.
  */
 export async function generateDesign(request: DesignRequest): Promise<{ body: DesignResponse; status: number }> {
     const ok = (body: DesignResponse) => ({ body, status: 200 });
     let provider: DesignProvider | null = null;
     try {
+        if (isImageEngine(request.engine)) return ok(await createImageDesign(request, request.engine));
+
         const config = getAiConfig();
 
         // A refined design's SVG comes back from the browser: check it again before use.
@@ -88,7 +94,7 @@ export async function generateDesign(request: DesignRequest): Promise<{ body: De
             }
 
             if (!design.illustration) {
-                return ok({ status: "success", design: toDesign(design, config, null), sources, usedWebSearch });
+                return ok({ status: "success", design: toDesign(design, config, null), sources, usedWebSearch, engine: "vector" });
             }
 
             // Without text the drawing gets the whole safe area (models tend to pick tiny
@@ -97,7 +103,7 @@ export async function generateDesign(request: DesignRequest): Promise<{ body: De
             const sanitized = sanitizeSvg(design.illustration.svg, config.area, target);
             if (sanitized.ok) {
                 const illustration = { svg: sanitized.svg, box: sanitized.box };
-                return ok({ status: "success", design: toDesign(design, config, illustration), sources, usedWebSearch });
+                return ok({ status: "success", design: toDesign(design, config, illustration), sources, usedWebSearch, engine: "vector" });
             }
 
             console.warn(`[AI] SVG rejected (${sanitized.reasons.join("; ")})${attempt === 0 ? ", retrying" : ""}`);

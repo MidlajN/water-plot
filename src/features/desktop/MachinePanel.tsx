@@ -1,21 +1,21 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CaretDown, CaretUp } from "@phosphor-icons/react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CaretDown, CaretUp, House, LockOpen } from "@phosphor-icons/react";
 
 import { usePlotter } from "../plotter/PlotterContext";
-import { focusRing, Segmented } from "./parts";
+import { focusRing, SecondaryButton, Segmented } from "./parts";
 
 const STEPS = [0.1, 1, 10] as const;
 const STEP_OPTIONS = STEPS.map((value) => ({ value, label: <span className="tabular-nums">{value}</span>, ariaLabel: `${value} mm` }));
 const DEFAULT_FEED = 3000;
 
 /**
- * Live machine position and a jog pad. Jogging is relative (mm) at the chosen step;
- * the server holds any move with Z to the Z feed ceiling.
+ * Live machine position, Home ($H) and Unlock ($X), and a jog pad. Jogging is relative
+ * (mm) at the chosen step; the server holds any move with Z to the Z feed ceiling.
  */
 export function MachinePanel() {
-    const { telemetry, gatewayConnected, busy, jog } = usePlotter();
+    const { telemetry, gatewayConnected, busy, jog, alarm, canHome, canUnlock, home, unlock } = usePlotter();
     const [step, setStep] = useState<(typeof STEPS)[number]>(1);
     const [feed, setFeed] = useState(DEFAULT_FEED);
 
@@ -38,6 +38,33 @@ export function MachinePanel() {
             <p className="type-footnote -mt-2 text-graphite">
                 Feed <span className="tabular-nums text-ink">{live ? telemetry.feed.toLocaleString() : "—"}</span> mm/min
             </p>
+
+            <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                    <SecondaryButton
+                        icon={<House size={16} weight="bold" />}
+                        title="Run the homing cycle ($H)"
+                        disabled={!canHome}
+                        onClick={() => void home()}
+                    >
+                        Home
+                    </SecondaryButton>
+                    <SecondaryButton
+                        icon={<LockOpen size={16} weight="bold" />}
+                        title="Clear the alarm ($X)"
+                        disabled={!canUnlock}
+                        onClick={() => void unlock()}
+                        className={alarm ? "bg-caution/12! text-caution! hover:bg-caution/20!" : ""}
+                    >
+                        Unlock
+                    </SecondaryButton>
+                </div>
+                {alarm && (
+                    <p role="status" className="type-footnote text-caution">
+                        Machine is in alarm — Unlock to clear it, or Home to re-reference.
+                    </p>
+                )}
+            </div>
 
             <div className="flex items-start gap-4">
                 <div className="grid grid-cols-3 grid-rows-3 gap-1.5" role="group" aria-label="Jog X and Y">
@@ -93,7 +120,13 @@ export function MachinePanel() {
 
             {!canJog && (
                 <p className="type-footnote text-graphite">
-                    {!live ? "Jogging is available once the plotter is connected." : "Jogging is paused while a plot is running."}
+                    {!live
+                        ? "Jogging is available once the plotter is connected."
+                        : alarm
+                          ? "Jogging is locked while the machine is in alarm."
+                          : telemetry.state === "Home"
+                            ? "Jogging is paused while the machine homes."
+                            : "Jogging is paused while a plot is running."}
                 </p>
             )}
         </div>

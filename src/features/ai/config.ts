@@ -34,8 +34,14 @@ const optionalText = z
     .optional()
     .transform((value) => value || undefined);
 
+/** The plotter working area the designs are sized to. */
+const AreaSchema = z.object({
+    AI_SVG_WIDTH_MM: z.coerce.number().positive().max(5000),
+    AI_SVG_HEIGHT_MM: z.coerce.number().positive().max(5000),
+});
+
 /** Settings shared by every provider. */
-const SharedSchema = z.object({
+const SharedSchema = AreaSchema.extend({
     AI_PROVIDER: z
         .string()
         .trim()
@@ -45,8 +51,6 @@ const SharedSchema = z.object({
         .pipe(z.enum(AI_PROVIDERS, { error: "AI_PROVIDER must be gemini or groq" })),
     AI_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(256).max(64_000),
     AI_ENABLE_WEB_SEARCH: booleanFlag.default(false),
-    AI_SVG_WIDTH_MM: z.coerce.number().positive().max(5000),
-    AI_SVG_HEIGHT_MM: z.coerce.number().positive().max(5000),
 });
 
 const GeminiSchema = z.object({
@@ -84,6 +88,12 @@ function parse<T>(schema: z.ZodType<T>): T {
         throw new AiConfigError(`AI settings missing or invalid: ${fields}`);
     }
     return parsed.data;
+}
+
+/** The working area alone (the image engines need nothing else from the AI settings). */
+export function getAiArea(): { width: number; height: number } {
+    const env = parse(AreaSchema);
+    return { width: env.AI_SVG_WIDTH_MM, height: env.AI_SVG_HEIGHT_MM };
 }
 
 /**

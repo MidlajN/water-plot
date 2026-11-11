@@ -2,13 +2,15 @@
 
 import { X } from "@phosphor-icons/react";
 
+import { focusRing } from "../desktop/parts";
 import { formatDuration } from "./format";
 import { PlotControls } from "./PlotControls";
 import { usePlotter } from "./PlotterContext";
 
-/** Plotter connection as a dot and a word. */
+/** Plotter connection as a dot and a word, with Unlock ($X) during an alarm. */
 export function PlotterStatus({ className = "" }: { className?: string }) {
-    const { link, gatewayConnected, telemetry } = usePlotter();
+    const { link, gatewayConnected, telemetry, alarm, canUnlock, unlock } = usePlotter();
+    const showUnlock = link === "online" && gatewayConnected && alarm;
 
     const [color, label] =
         link !== "online"
@@ -23,6 +25,20 @@ export function PlotterStatus({ className = "" }: { className?: string }) {
         <span className={`type-caption inline-flex items-center gap-1.5 font-semibold text-graphite ${className}`}>
             <span aria-hidden className={`h-2 w-2 rounded-full ${color}`} />
             {label}
+            {showUnlock && (
+                <button
+                    type="button"
+                    title="Clear the alarm ($X)"
+                    disabled={!canUnlock}
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        void unlock();
+                    }}
+                    className={`press ml-0.5 h-5 rounded-full bg-caution/15 px-2 font-semibold text-caution hover:bg-caution/25 disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`}
+                >
+                    Unlock
+                </button>
+            )}
         </span>
     );
 }
