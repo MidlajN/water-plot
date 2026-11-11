@@ -30,7 +30,7 @@ export async function POST(request: Request) {
         const body = await readSvgRequest(request);
         if (!body.ok) return body.response;
         try {
-            const result = await convertSvgToGcode(body.svg);
+            const result = await convertSvgToGcode(body.svg, {}, { forPlotter: true });
             gcode = result.gcode;
             estimatedSeconds = Math.round(result.time);
         } catch (error) {
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
         const text = await request.text().catch(() => "");
         if (!text.trim()) return jsonError("G-code is empty.", 400);
         if (new TextEncoder().encode(text).byteLength > MAX_SVG_SIZE) return jsonError("G-code exceeds the 10 MB limit.", 413);
-        gcode = makeGcodeSafe(text).gcode;
+        gcode = makeGcodeSafe(text, { forPlotter: true }).gcode;
     } else {
         return jsonError("Content-Type must be image/svg+xml or text/plain.", 415);
     }

@@ -99,6 +99,7 @@ Settings live in `.env`. The worker reads only `.env`; Next.js reads `.env` and
 | `PLOTTER_Y_OFFSET` | `0` | Shifts drawings along Y, in mm. |
 | `PLOTTER_PARK_X`, `PLOTTER_PARK_Y` | `0`, `0` | Where the pen goes after every plot, in mm, in the same coordinates as the drawing. The pen lifts to travel height first. |
 | `PLOTTER_PARK` | on | `false` leaves the pen over the last stroke instead of parking. |
+| `PLOTTER_MIRROR` | off | `true` flips every plot left–right across the 690 mm page, for drawing on the back of glass that is read from the other side. It covers Plot, Auto plots and uploaded `.gcode` files. Download G-code stays unmirrored, so a downloaded file is mirrored once when it's plotted. The park position isn't mirrored. |
 | `GROQ_API_KEY` | none | Groq API key (`gsk_…`) for AI Creative Studio. Server-side only. |
 | `GROQ_BASE_URL` | none | Groq's OpenAI-compatible endpoint, `https://api.groq.com/openai/v1`. |
 | `GROQ_MODEL` | none | Model for designs. It needs strict structured output, and Groq's built-in `browser_search` tool if web search is on. `openai/gpt-oss-120b` (or `openai/gpt-oss-20b`) supports both. |
@@ -172,7 +173,8 @@ delay, up to 10 seconds between attempts.
    If it lands somewhere other than expected, or the machine refuses moves outside its
    travel, set `PLOTTER_QUADRANT`, `PLOTTER_X_OFFSET` and `PLOTTER_Y_OFFSET` to match
    your machine's origin. Restart the worker, then plot again. Check this before plotting
-   anything large.
+   anything large. With `PLOTTER_MIRROR=true`, a rectangle near the page's left edge
+   plots near the right edge.
 3. **Check the pen heights.** While the rectangle plots, check that the pen touches the
    paper when drawing and clears it when travelling (see [Pen safety](#pen-safety)).
 

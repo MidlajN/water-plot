@@ -33,11 +33,17 @@ function polarPoint(angle: number, length: number) {
     };
 }
 
+/**
+ * The clock as SVG elements in mm. `transform` goes on every element (not on the group,
+ * which svg-to-gcode would ignore); the page uses it to scale mm to px.
+ */
 export function generateClockSvg(
     date = new Date(),
     timezone = "Asia/Kolkata",
+    transform = "",
 ) {
     const { hours, minutes } = getTimeParts(date, timezone);
+    const scaled = transform ? `transform="${transform}"` : "";
 
     const hourAngle = ((hours % 12) + minutes / 60) * 30;
     const minuteAngle = minutes * 6;
@@ -52,6 +58,7 @@ export function generateClockSvg(
 
         return `
         <line
+            ${scaled}
             x1="${start.x}" y1="${start.y}"
             x2="${end.x}" y2="${end.y}"
             stroke="#111111"
@@ -63,6 +70,7 @@ export function generateClockSvg(
     return `
         <g id="clock">
             <circle
+                ${scaled}
                 cx="${CLOCK_CENTER_X}"
                 cy="${CLOCK_CENTER_Y}"
                 r="${CLOCK_RADIUS}"
@@ -74,6 +82,7 @@ export function generateClockSvg(
             ${ticks}
 
             <line
+                ${scaled}
                 x1="${CLOCK_CENTER_X}" y1="${CLOCK_CENTER_Y}"
                 x2="${hourHand.x}" y2="${hourHand.y}"
                 stroke="#111111"
@@ -82,6 +91,7 @@ export function generateClockSvg(
             />
 
             <line
+                ${scaled}
                 x1="${CLOCK_CENTER_X}" y1="${CLOCK_CENTER_Y}"
                 x2="${minuteHand.x}" y2="${minuteHand.y}"
                 stroke="#111111"
@@ -90,6 +100,7 @@ export function generateClockSvg(
             />
 
             <circle
+                ${scaled}
                 cx="${CLOCK_CENTER_X}"
                 cy="${CLOCK_CENTER_Y}"
                 r="3"

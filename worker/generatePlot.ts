@@ -5,13 +5,22 @@ import { getSingleLineFont } from "../src/features/workspace/text/fonts";
 import { GlyphPathWriter, measureText } from "../src/features/workspace/text/singleLinePath";
 import { generateClockSvg } from "./generateClockSvg";
 
+/** The page, in mm: the same size as the Edit page. */
 const WIDTH = 690;
 const HEIGHT = 290;
+
+/**
+ * The layout is in mm, but svg-to-gcode reads SVG user units as 96 dpi px (which is
+ * what Edit's export writes). Each element is scaled to px so the page plots at full
+ * size; the scale goes on the elements because svg-to-gcode ignores it on a <g>.
+ */
+const PX_PER_MM = 96 / 25.4;
+const MM_TO_PX = `scale(${PX_PER_MM})`;
 
 /** The quote is drawn in the script font: one pen-down per word, plus its dots and bars. */
 const QUOTE_FONT = getSingleLineFont("HersheyScript1");
 
-/** Area to the right of the clock the quote must fit in (viewBox units, i.e. mm). */
+/** Area to the right of the clock the quote must fit in (mm). */
 const QUOTE_BOX = { left: 190, right: 670, top: 20, bottom: 270 };
 
 const MAX_FONT_SIZE = 36;
@@ -83,11 +92,12 @@ export function generatePlotSvg(
             xmlns="http://www.w3.org/2000/svg"
             width="${WIDTH}mm"
             height="${HEIGHT}mm"
-            viewBox="0 0 ${WIDTH} ${HEIGHT}"
+            viewBox="0 0 ${WIDTH * PX_PER_MM} ${HEIGHT * PX_PER_MM}"
         >
-            ${generateClockSvg(date, timezone)}
+            ${generateClockSvg(date, timezone, MM_TO_PX)}
             <path
                 id="quote"
+                transform="${MM_TO_PX}"
                 d="${d}"
                 fill="none"
                 stroke="#111111"

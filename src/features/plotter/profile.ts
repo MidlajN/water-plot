@@ -50,6 +50,54 @@ export function plotterConverterSettings(): ConverterSettings {
     return settings;
 }
 
+/** Page width in mm, shared by Edit's page, Auto plots and AI designs (690 × 290). */
+export const PAGE_WIDTH_MM = 690;
+
+/**
+ * PLOTTER_MIRROR=true flips plots left–right, for drawing on the back of glass that is
+ * read from the other side. Only G-code sent to the plotter is mirrored, never downloads.
+ */
+export function plotterMirror(): boolean {
+    return /^(true|on|yes|1)$/i.test(process.env.PLOTTER_MIRROR?.trim() ?? "");
+}
+
+/**
+ * Mirrors G-code left–right about the vertical line X = `axis`. Absolute X becomes
+ * 2·axis − X and relative (G91) X is negated. Arcs swap G2/G3 and negate I, since a
+ * mirror reverses their direction. Everything else passes through unchanged.
+ */
+export function mirrorGcodeX(gcode: string, axis: number): string {
+    let relative = false;
+    let motion: number | null = null;
+    const out: string[] = [];
+
+    for (const line of gcode.split(/\r?\n/)) {
+        if (!line.trim()) continue;
+
+        const gWords = [...line.matchAll(/G\s*(\d+(?:\.\d+)?)/gi)].map(([, value]) => Number(value));
+        if (gWords.includes(90)) relative = false;
+        if (gWords.includes(91)) relative = true;
+        const motionWord = gWords.find((value) => value === 0 || value === 1 || value === 2 || value === 3);
+        if (motionWord !== undefined) motion = motionWord;
+
+        out.push(
+            line.replace(/([GXI])\s*([-+]?(?:\d+\.?\d*|\.\d+))/gi, (word, letter: string, raw: string) => {
+                const value = Number(raw);
+                switch (letter.toUpperCase()) {
+                    case "G":
+                        return value === 2 ? "G3" : value === 3 ? "G2" : word;
+                    case "X":
+                        return `X${format(relative ? -value : 2 * axis - value)}`;
+                    default: // I, the arc centre's X offset.
+                        return motion === 2 || motion === 3 ? `I${format(-value)}` : word;
+                }
+            }),
+        );
+    }
+
+    return out.join("\n") + "\n";
+}
+
 export interface ParkPosition {
     x: number;
     y: number;

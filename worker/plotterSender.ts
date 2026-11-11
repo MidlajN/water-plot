@@ -29,7 +29,7 @@ export async function sendPlotJob(jobId: number, svgPath: string) {
             return;
         }
 
-        const { gcode, lines } = await convertSvgToGcode(fs.readFileSync(svgPath, "utf8"));
+        const { gcode, lines } = await convertSvgToGcode(fs.readFileSync(svgPath, "utf8"), {}, { forPlotter: true });
         const upload = await uploadJob(`auto-job-${jobId}`, gcode);
         await startJob(upload.job_id);
 
